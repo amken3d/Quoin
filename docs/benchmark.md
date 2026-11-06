@@ -36,6 +36,15 @@ The same harness drives every language. Only the spec file, compiler command and
 
 [bench/pilot](../bench/pilot) is a first, small version of this harness: 10 tasks, Quoin against freestanding C, one model, QEMU as an unofficial oracle (output plus measured stack). Its oracle is tested against deliberately broken programs, and its reference solutions pass in both languages. It needs `QUOIN_PILOT_API_KEY` to run.
 
+**First result ([2026-11-06](../bench/results/pilot-2026-11-06/report.md), Claude Opus 5.5, effort medium, 3 seeds):** Quoin lost. The median tokens-to-correct was 6,299 for Quoin and 992 for C, a 5.7× gap, and C was cheaper on all 10 tasks. Both languages passed all 30 runs on the first turn with no compile errors, so the pilot measured no retries at all:
+
+- 5,261 of Quoin's tokens per turn are the language spec, against 423 for C's platform notes. That is 83% of a typical Quoin run.
+- Beyond the spec, Quoin runs still used 1.8× the tokens (1,038 vs 569 median). The programs are the same length; the model thinks about 3.6× longer before writing Quoin.
+- In dollars the gap is 1.5× ($0.63 vs $0.41 for 30 runs), because the cached spec costs a twentieth of fresh input.
+- A model with no prior exposure to Quoin wrote 30 correct programs out of 30 from the spec alone.
+
+What it means: on tasks this easy, nothing is left for Quoin to save, and the spec is pure overhead charged on every turn. Quoin can only win where C solutions need several more turns than Quoin's. The next pilot needs tasks where that happens (subtle overflow and bounds bugs, tight stack budgets, cycle claims) and a much shorter spec.
+
 ### Task layout
 
 ```
