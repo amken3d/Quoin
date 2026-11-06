@@ -1,0 +1,20 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+fn main()
+  n := input_len()
+  var state: u8 = 0
+  var run: u8 = 0
+  for i in 0..n
+    s := input_byte(i) & 1
+    if s != state
+      run += 1
+      if run == 3
+        state = s
+        run = 0
+        emitu(i)
+        emitu(state)
+    else
+      run = 0

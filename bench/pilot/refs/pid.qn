@@ -1,0 +1,23 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+fn main()
+  n := input_len()
+  var integ: i32 = 0
+  var prev: i32 = 0
+  for k in 0..n / 2
+    e := i32(input_byte(2 * k)) - i32(input_byte(2 * k + 1))
+    integ += e
+    if integ > 1000
+      integ = 1000
+    if integ < -1000
+      integ = -1000
+    var out: i32 = 3 * e + integ / 4 + 2 * (e - prev)
+    if out > 255
+      out = 255
+    if out < -255
+      out = -255
+    emit(out)
+    prev = e

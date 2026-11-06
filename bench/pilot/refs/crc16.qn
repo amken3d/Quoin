@@ -1,0 +1,16 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+fn main()
+  n := input_len()
+  var crc: u16 = 0xFFFF
+  for i in 0..n
+    crc = crc ^ (u16(input_byte(i)) << 8)
+    for k in 0..8
+      if crc & 0x8000 != 0
+        crc = (crc << 1) ^ 0x1021
+      else
+        crc = crc << 1
+  emitu(crc)

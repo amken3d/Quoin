@@ -1,0 +1,32 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+regs Ctrl
+  REG: u32 @ 0x00
+    EN: bool @ 0
+    MODE: u2 @ 4
+    DIV: u12 @ 8
+    IRQ: bool @ 31
+
+periph CTRL: Ctrl @ 0x10370000
+
+fn main()
+  CTRL.REG = 0
+  n := input_len()
+  for k in 0..n / 2
+    f := input_byte(2 * k)
+    v := u32(input_byte(2 * k + 1))
+    if f == 0 && v <= 1
+      CTRL.REG.EN = v == 1
+    else if f == 1 && v <= 3
+      CTRL.REG.MODE = u2(v)
+    else if f == 2
+      CTRL.REG.DIV = u12(v * 16)
+    else if f == 3 && v <= 1
+      CTRL.REG.IRQ = v == 1
+    else
+      emit(-1)
+      continue
+    emitu(CTRL.REG)

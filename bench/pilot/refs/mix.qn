@@ -1,0 +1,11 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+fn main()
+  n := input_len()
+  for k in 0..n / 2
+    a := i32(i8.wrap(input_byte(2 * k)))
+    b := i32(i8.wrap(input_byte(2 * k + 1)))
+    emit(i16.sat(a * 200 + b * 200))

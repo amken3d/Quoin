@@ -32,6 +32,10 @@ The same harness drives every language. Only the spec file, compiler command and
 - Every task has a reference solution in every baseline language, used for static token density and as proof that the oracle is satisfiable.
 - Every task declares its stack and cycle bounds. Those bounds come from the reference solution's measured worst case plus a stated margin, so they are achievable in every language.
 
+### Pilot
+
+[bench/pilot](../bench/pilot) is a first, small version of this harness: 10 tasks, Quoin against freestanding C, one model, QEMU as an unofficial oracle (output plus measured stack). Its oracle is tested against deliberately broken programs, and its reference solutions pass in both languages. It needs `QUOIN_PILOT_API_KEY` to run.
+
 ### Task layout
 
 ```
