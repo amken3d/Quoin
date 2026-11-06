@@ -13,6 +13,7 @@ A small, honest first measurement of the benchmark's headline metric ([docs/benc
 - **Pass**: output matches on every input, `main` returns without trapping or faulting, and the measured stack (call stack plus Quoin's data stack) is within the task's budget.
 - **Tokens**: every input, cache-write, cache-read and output token reported by the API, summed over all turns. A run that fails counts at the token ceiling (150,000). Per task, the median over seeds; then the median and p90 over tasks.
 - **Model**: Claude Opus 5.5, adaptive thinking (always on), effort `medium` for every arm. No refusal fallback, so every run stays on one model; a refusal counts as a failure.
+- **Other models**: `-model claude-haiku-4-5` runs the previous-generation Haiku, which has no effort setting; it runs without extended thinking unless `-thinking-budget N` is given. A model needs an entry in `prices` in [model.go](model.go).
 
 Inputs are fresh on every attempt and loaded into memory by QEMU, so a program cannot hardcode answers it was shown in feedback.
 
@@ -25,6 +26,7 @@ go run . -mode run -tasks crc16 -seeds 1          # smoke test against the API
 go run . -mode run -seeds 3 -max-usd 60           # easy set: 10 tasks x 2 languages x 3 seeds
 go run . -mode run -set hard -langs quoin,quoin-brief,c -seeds 3
 go run . -mode count -langs quoin,quoin-brief,c   # system-prompt sizes in tokens
+go run . -mode run -model claude-haiku-4-5 -set hard -langs c,quoin-brief,quoin -seeds 3   # older, cheaper model
 ```
 
 The run reads the key from `QUOIN_PILOT_API_KEY` (not `ANTHROPIC_API_KEY`, so it cannot interfere with a Claude Code session). Results go to `../results/pilot-<date>/` (or `-out`): `report.md`, `summary.json`, and `runs.jsonl` with every reply, program and feedback message for audit. `go run . -mode report -out DIR` rebuilds a report from those files; `python3 analyze.py DIR` splits tokens into the fixed prompt and the rest and lists the compiler diagnostics models hit. With Claude Opus 5.5, a 60-run pilot has cost about $1 so far, because most runs pass on the first turn; `-max-usd` caps it.

@@ -51,6 +51,13 @@ What it means: on tasks this easy, nothing is left for Quoin to save, and the sp
 - C still wins: 1,350 on the hard set, a 2.5× gap. Claude Opus 5.5 did not fall into a single trap in C (0 wrong outputs, traps or stack overruns in 54 runs), so there were no retries for Quoin to save.
 - In dollars, with the cached spec at its real price, Quoin is at 1.3× C on the hard set and 1.1× on the easy set.
 
+**Third pilot ([summary](../bench/results/pilot3-haiku45-summary.md)):** the same tasks with an older, cheaper model (Claude Haiku 4.5, no extended thinking), to see whether a model that makes mistakes gains from Quoin's checks.
+
+- It does make mistakes in C (8 of 54 runs needed a retry) and fixes all of them.
+- It makes many more in Quoin. On the hard set Quoin with the brief solved 16 of 24 runs against C's 24 of 24, at 10.8× C's tokens (per-task geometric mean); the full reference did worse.
+- Most compile failures are C and Go habits Quoin rejects, led by `var i` followed by `for i in`. Runtime traps caught real bugs but report no location or kind, so the model could not act on them.
+- Next changes to test on unseen tasks: located, typed trap reports, and diagnostics that name the habit.
+
 ### Task layout
 
 ```

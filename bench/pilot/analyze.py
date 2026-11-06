@@ -66,7 +66,7 @@ for lang in langs:
             if t["phase"] != "compile":
                 continue
             fb = t.get("feedback", "")
-            if lang == "quoin":
+            if lang.startswith("quoin"):
                 codes = {f"{c} {k}" for c, k in code_re.findall(fb)}
             else:
                 codes = {m.strip() for m in re.findall(r"error: ([^\n\[]+)", fb)}

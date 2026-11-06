@@ -21,10 +21,21 @@ func (u Usage) add(v Usage) Usage {
 	return Usage{u.In + v.In, u.CacheWrite + v.CacheWrite, u.CacheRead + v.CacheRead, u.Out + v.Out}
 }
 
-// Price per million tokens (Claude Opus 5.5): input $4, output $20, cache
-// reads $0.20; 5-minute cache writes are billed at 1.25x input.
+// pricing is dollars per million tokens; 5-minute cache writes are billed
+// at 1.25x input.
+type pricing struct{ in, cacheWrite, cacheRead, out float64 }
+
+var prices = map[string]pricing{
+	"claude-opus-5-5":  {in: 4, cacheWrite: 5, cacheRead: 0.20, out: 20},
+	"claude-haiku-4-5": {in: 1, cacheWrite: 1.25, cacheRead: 0.10, out: 5},
+}
+
+// price is the pricing of the model this run uses (set in main).
+var price = prices["claude-opus-5-5"]
+
 func (u Usage) USD() float64 {
-	return (float64(u.In)*4 + float64(u.CacheWrite)*5 + float64(u.CacheRead)*0.20 + float64(u.Out)*20) / 1e6
+	return (float64(u.In)*price.in + float64(u.CacheWrite)*price.cacheWrite +
+		float64(u.CacheRead)*price.cacheRead + float64(u.Out)*price.out) / 1e6
 }
 
 // Reply is one model turn.
@@ -41,34 +52,48 @@ type Provider interface {
 }
 
 // anthropicProvider calls the Messages API with one fixed model and effort.
-// Thinking is adaptive (the default, and the only mode on Claude Opus 5.5).
+// On Claude Opus 5.5 thinking is adaptive (its default and only mode).
+// Claude Haiku 4.5 predates adaptive thinking and the effort setting: it runs
+// without extended thinking unless thinkingBudget is set.
 // No refusal fallback is configured: a benchmark run must stay on one model,
 // so a refusal is recorded as a failed run instead.
 type anthropicProvider struct {
-	client anthropic.Client
-	model  string
-	effort anthropic.OutputConfigEffort
+	client         anthropic.Client
+	model          string
+	effort         anthropic.OutputConfigEffort
+	thinkingBudget int64
 }
 
-func newAnthropic(apiKey, model, effort string) *anthropicProvider {
+// legacyModel reports whether model takes budget_tokens thinking and no effort.
+func legacyModel(model string) bool { return strings.HasPrefix(model, "claude-haiku-4-5") }
+
+func newAnthropic(apiKey, model, effort string, thinkingBudget int64) *anthropicProvider {
 	return &anthropicProvider{
-		client: anthropic.NewClient(option.WithAPIKey(apiKey), option.WithMaxRetries(4)),
-		model:  model,
-		effort: anthropic.OutputConfigEffort(effort),
+		client:         anthropic.NewClient(option.WithAPIKey(apiKey), option.WithMaxRetries(4)),
+		model:          model,
+		effort:         anthropic.OutputConfigEffort(effort),
+		thinkingBudget: thinkingBudget,
 	}
 }
 
 func (p *anthropicProvider) Turn(ctx context.Context, key, system string, msgs []anthropic.MessageParam) (Reply, error) {
-	resp, err := p.client.Messages.New(ctx, anthropic.MessageNewParams{
+	params := anthropic.MessageNewParams{
 		Model:     p.model,
 		MaxTokens: 16000,
 		System: []anthropic.TextBlockParam{{
 			Text:         system,
 			CacheControl: anthropic.NewCacheControlEphemeralParam(),
 		}},
-		Messages:     msgs,
-		OutputConfig: anthropic.OutputConfigParam{Effort: p.effort},
-	})
+		Messages: msgs,
+	}
+	if legacyModel(p.model) {
+		if p.thinkingBudget > 0 {
+			params.Thinking = anthropic.ThinkingConfigParamOfEnabled(p.thinkingBudget)
+		}
+	} else {
+		params.OutputConfig = anthropic.OutputConfigParam{Effort: p.effort}
+	}
+	resp, err := p.client.Messages.New(ctx, params)
 	if err != nil {
 		return Reply{}, err
 	}

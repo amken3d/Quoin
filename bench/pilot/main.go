@@ -35,13 +35,22 @@ func main() {
 	vectors := flag.Int("vectors", 3, "random inputs per test")
 	workers := flag.Int("workers", 4, "runs in parallel")
 	model := flag.String("model", "claude-opus-5-5", "model id")
-	effort := flag.String("effort", "medium", "output effort")
+	effort := flag.String("effort", "medium", "output effort (ignored by claude-haiku-4-5)")
+	thinkingBudget := flag.Int64("thinking-budget", 0, "claude-haiku-4-5 only: extended-thinking budget in tokens (0 = no thinking)")
 	maxUSD := flag.Float64("max-usd", 60, "stop starting new runs once this much has been spent")
 	out := flag.String("out", "", "results directory (default ../results/pilot-<date>)")
 	repo := flag.String("repo", "../..", "Quoin repository root")
 	flag.Parse()
 
 	ctx := context.Background()
+	pr, ok := prices[*model]
+	if !ok {
+		check(fmt.Errorf("no pricing for model %q: add it to prices in model.go", *model))
+	}
+	price = pr
+	if legacyModel(*model) {
+		*effort = "n/a"
+	}
 	work, err := os.MkdirTemp("", "pilot-work-")
 	check(err)
 	defer os.RemoveAll(work)
@@ -85,7 +94,7 @@ func main() {
 		if key == "" {
 			check(fmt.Errorf("QUOIN_PILOT_API_KEY is not set"))
 		}
-		for name, n := range specTokens(ctx, newAnthropic(key, *model, *effort), ls) {
+		for name, n := range specTokens(ctx, newAnthropic(key, *model, *effort, *thinkingBudget), ls) {
 			fmt.Printf("%-12s %d tokens\n", name, n)
 		}
 		return
@@ -102,7 +111,7 @@ func main() {
 	if key == "" {
 		check(fmt.Errorf("QUOIN_PILOT_API_KEY is not set: add it to the environment's variables and start a new session"))
 	}
-	prov := newAnthropic(key, *model, *effort)
+	prov := newAnthropic(key, *model, *effort, *thinkingBudget)
 	dir := *out
 	if dir == "" {
 		dir = filepath.Join("..", "results", "pilot-"+time.Now().UTC().Format("2006-01-02"))
@@ -174,7 +183,8 @@ func main() {
 	meta := map[string]any{
 		"date": time.Now().UTC().Format(time.RFC3339), "model": *model, "effort": *effort, "seeds": *seeds,
 		"max_iters": *iters, "ceiling": *ceiling, "vectors": *vectors, "stopped_by_budget": stopped, "set": *set,
-		"spec_tokens": specTokens(ctx, prov, ls), "ref_tokens": refTokens(ctx, prov, ts, ls),
+		"thinking_budget": *thinkingBudget,
+		"spec_tokens":     specTokens(ctx, prov, ls), "ref_tokens": refTokens(ctx, prov, ts, ls),
 	}
 	md := report(runs, ts, ls, cfg, meta)
 	check(os.WriteFile(filepath.Join(dir, "report.md"), []byte(md), 0o644))
