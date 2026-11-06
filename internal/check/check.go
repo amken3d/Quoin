@@ -70,6 +70,8 @@ type checker struct {
 	dataOff      int64
 	dataHigh     int64
 	frame        int64
+	lenMax       map[*types.Symbol]*big.Int // `where p.len <= N` facts for slice params
+	assigned     map[string]bool            // local names assigned after their definition
 }
 
 // Check type-checks all files as one program.
@@ -169,7 +171,7 @@ func (c *checker) collect() {
 			}
 		case *ast.FnDecl:
 			fn := &types.Fn{Name: d.Name, CName: "qn_" + d.Name, ISR: d.ISR, Extern: d.Extern, Pos: d.P, Decl: d,
-				StackDecl: -1, Globals: map[*types.Symbol]types.GlobalUse{}, QueueUses: map[*types.Symbol]types.QueueUse{}}
+				StackDecl: -1, CyclesDecl: -1, Globals: map[*types.Symbol]types.GlobalUse{}, QueueUses: map[*types.Symbol]types.QueueUse{}}
 			switch {
 			case d.Name == "main" && !d.Extern && !d.ISR:
 				fn.Main = true
@@ -634,6 +636,33 @@ func (c *checker) resolveSignatures() {
 				c.d.ErrorFix(d.Stack.EPos(), "E003", "`stack` is only for extern fns", "drop it; Quoin computes stack use for its own functions")
 			} else if v, ok := c.constInt(d.Stack, nil); ok {
 				fn.StackDecl = v.Int64()
+			}
+		}
+		if d.Cycles != nil {
+			if !d.Extern {
+				c.d.ErrorFix(d.Cycles.EPos(), "E003", "`cycles N` is only for extern fns", "claim a bound with `where cycles <= N`")
+			} else if v, ok := c.constInt(d.Cycles, nil); ok {
+				fn.CyclesDecl = v.Int64()
+			}
+		}
+		for _, cl := range d.Claims {
+			v, ok := c.constInt(cl.Limit, nil)
+			if !ok {
+				continue
+			}
+			if v.Sign() <= 0 || !v.IsInt64() {
+				c.d.Errorf(cl.Limit.EPos(), "E103", "claim %s <= %s must be positive", cl.Kind, v)
+				continue
+			}
+			if d.Extern {
+				c.d.ErrorFix(cl.P, "E003", "extern fns declare bounds, they do not claim them", "write `"+cl.Kind+" N` after the signature")
+				continue
+			}
+			fn.ClaimPos = cl.P
+			if cl.Kind == "cycles" {
+				fn.ClaimCycles = v.Int64()
+			} else {
+				fn.ClaimStack = v.Int64()
 			}
 		}
 		if len(d.Where) > 0 && d.Extern {

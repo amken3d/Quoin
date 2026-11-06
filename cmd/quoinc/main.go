@@ -3,6 +3,7 @@
 //	quoinc check [flags] file.qn...        diagnostics + worst-case stack line
 //	quoinc build [flags] file.qn... [-o d] also write C99, quoin_rt.h, quoin_stack.ld
 //	quoinc stack --su DIR file.qn...       exact bounds from gcc -fstack-usage
+//	quoinc run --target m33-qemu file.qn   build natively and run under QEMU
 //	quoinc explain E107                    describe a diagnostic code
 package main
 
@@ -13,6 +14,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/amken3d/quoin/internal/diag"
 	"github.com/amken3d/quoin/internal/driver"
@@ -24,6 +26,7 @@ const usage = `quoinc - the Quoin compiler
 usage:
   quoinc check   [flags] file.qn...   check, print diagnostics and STACK/CHECKS lines
   quoinc build   [flags] file.qn...   also emit C99 to -o (default ./build)
+  quoinc run     [flags] file.qn...   build for m33-qemu and run under QEMU (measures stack)
   quoinc stack   --su PATH [flags] file.qn...
                                       worst-case stack from gcc -fstack-usage files
   quoinc explain CODE                 describe a diagnostic code (E107, W101, ...)
@@ -45,7 +48,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch cmd {
 	case "explain":
 		return explain(rest, stdout, stderr)
-	case "check", "build", "stack":
+	case "check", "build", "stack", "run":
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		newFlags(stdout).PrintDefaults()
@@ -63,6 +66,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 	outDir := fs.String("o", "build", "output directory for build")
 	su := fs.String("su", "", "comma-separated .su files or directories (gcc -fstack-usage)")
 	excFrame := fs.Int64("exc-frame", 32, "bytes the core pushes per interrupt (32 on Cortex-M; 104 with an FPU context)")
+	target := fs.String("target", "c", "c (C99 for any toolchain), rp2350 (native Thumb-2, full claims), m33-qemu (native, for QEMU)")
+	noLink := fs.Bool("no-link", false, "native targets: write assembly only, do not assemble or link")
+	insns := fs.Bool("insns", false, "run: count instructions executed in main (slow)")
 	if err := fs.Parse(interleave(rest)); err != nil {
 		return 2
 	}
@@ -76,7 +82,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "quoinc:", err)
 		return 2
 	}
-	opt := driver.Options{Budget: *budget, Lines: !*noLine, Emit: cmd == "build", ExcFrame: *excFrame}
+	if cmd == "run" {
+		*target = "m33-qemu"
+	}
+	opt := driver.Options{Budget: *budget, Lines: !*noLine, Emit: cmd == "build", ExcFrame: *excFrame, Target: *target}
 	if cmd == "stack" {
 		if *su == "" {
 			fmt.Fprintln(stderr, "quoinc: stack needs --su PATH (compile the C with -fstack-usage)")
@@ -98,11 +107,27 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	r := driver.Compile(srcs, opt)
 	var written []string
+	var elf string
 	if cmd == "build" && r.C != "" {
 		written, err = r.WriteOutputs(*outDir, files[0])
 		if err != nil {
 			fmt.Fprintln(stderr, "quoinc:", err)
 			return 2
+		}
+	}
+	if (cmd == "build" || cmd == "run") && r.Asm != "" {
+		dir := *outDir
+		if cmd == "run" {
+			dir, _ = os.MkdirTemp("", "quoinc-run-")
+			defer os.RemoveAll(dir)
+		}
+		written, elf, err = r.WriteNative(dir, files[0], !*noLink || cmd == "run")
+		if err != nil {
+			fmt.Fprintln(stderr, "quoinc:", err)
+			return 2
+		}
+		if cmd == "run" {
+			written = nil
 		}
 	}
 	if *asJSON {
@@ -114,6 +139,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		if r.Report != nil {
 			fmt.Fprintln(stdout, r.Report.Line())
+			if l := r.CyclesLine(*verbose); l != "" {
+				fmt.Fprintln(stdout, l)
+			}
 			fmt.Fprintln(stdout, r.Report.ChecksLine())
 			if *verbose || cmd == "stack" {
 				fmt.Fprint(stdout, r.Report.Detail())
@@ -125,6 +153,30 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	if r.Diags.HasErrors() {
 		return 1
+	}
+	if cmd == "run" {
+		if elf == "" {
+			fmt.Fprintln(stderr, "quoinc: run needs arm-none-eabi-as/ld")
+			return 2
+		}
+		res, err := driver.RunQEMU(elf, *insns, 60*time.Second)
+		if err != nil {
+			fmt.Fprintln(stderr, "quoinc:", err)
+			return 2
+		}
+		fmt.Fprintln(stdout, res.Output)
+		if res.StackHW >= 0 && r.Report != nil && len(r.Report.Entries) > 0 {
+			bound := r.Report.Entries[0].Call
+			fmt.Fprintf(stdout, "MEASURED stack=%dB (bound %dB) data=%dB (bound %dB)", res.StackHW, bound, res.DStackHW, r.Report.DataTotal)
+			if res.Insns >= 0 {
+				fmt.Fprintf(stdout, " insns=%d", res.Insns)
+				if b := r.Bounds[r.Program.Entries[0]]; !b.Unbounded && !b.NeverReturns {
+					fmt.Fprintf(stdout, " (bound %d)", b.Insns)
+				}
+			}
+			fmt.Fprintln(stdout)
+		}
+		return res.Exit
 	}
 	return 0
 }
@@ -140,7 +192,7 @@ func newFlags(w io.Writer) *flag.FlagSet {
 func interleave(args []string) []string {
 	var flags, pos []string
 	takesValue := map[string]bool{"-budget": true, "--budget": true, "-o": true, "--o": true, "-su": true, "--su": true,
-		"-exc-frame": true, "--exc-frame": true}
+		"-exc-frame": true, "--exc-frame": true, "-target": true, "--target": true}
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if strings.HasPrefix(a, "-") && a != "-" {

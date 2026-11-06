@@ -14,6 +14,7 @@ import (
 
 var wantRe = regexp.MustCompile(`//!((?:\s+[EW]\d{3})+)\s*$`)
 var budgetRe = regexp.MustCompile(`(?m)^// budget: (\d+)`)
+var targetRe = regexp.MustCompile(`(?m)^// target: ([\w-]+)`)
 
 // TestDiagnostics compiles every testdata/errors/*.qn and requires the set
 // of (line, code) error pairs to equal the `//! CODE` annotations.
@@ -37,6 +38,9 @@ func TestDiagnostics(t *testing.T) {
 				}
 			}
 			opt := Options{}
+			if m := targetRe.FindSubmatch(src); m != nil {
+				opt.Target = string(m[1])
+			}
 			if m := budgetRe.FindSubmatch(src); m != nil {
 				opt.Budget, _ = strconv.ParseInt(string(m[1]), 10, 64)
 			}
@@ -85,6 +89,9 @@ func TestRun(t *testing.T) {
 			src, err := os.ReadFile(f)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if !hasTarget(string(src), "c") {
+				t.Skip("not a C-target test")
 			}
 			want := wantBlock(string(src))
 			r := Compile([]Source{{Name: filepath.Base(f), Text: src}}, Options{Emit: true, Lines: true})

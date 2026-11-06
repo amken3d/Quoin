@@ -161,10 +161,20 @@ type FnDecl struct {
 	Bang   bool     // `!` present
 	Where  []Expr
 	Stack  Expr // extern: `stack N`
+	Cycles Expr // extern: `cycles N`
+	Claims []Claim
 	ISR    bool
 	Extern bool
 	Body   *Block // nil for extern
 	Fn     *types.Fn
+}
+
+// Claim is a resource contract in a where clause: `cycles <= N` or
+// `stack <= N`. Claims are proven statically by the backend.
+type Claim struct {
+	P     diag.Pos
+	Kind  string // "cycles" or "stack"
+	Limit Expr
 }
 
 func (d *ConstDecl) DPos() diag.Pos  { return d.P }

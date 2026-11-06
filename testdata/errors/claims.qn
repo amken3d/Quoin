@@ -1,0 +1,33 @@
+// target: m33-qemu
+extern fn wait_us(us: u32) stack 16
+
+fn tight(a: [8]u8) u32 where cycles <= 20 //! E301
+  var s: u32 = 0
+  for v in a
+    s += v
+  return s
+
+fn ok(a: [8]u8) u32 where cycles <= 100000, stack <= 4096
+  var s: u32 = 0
+  for v in a
+    s += v
+  return s
+
+fn spin(n: u32) where cycles <= 5000 //! E303
+  var i: u32 = 0
+  for i < n
+    i += 1
+
+fn sleepy() where cycles <= 5000 //! E303
+  wait_us(10)
+
+fn small() where stack <= 8 //! E302
+  var big: [64]u8
+  big[0] = 1
+
+fn main()
+  var a: [8]u8
+  x := tight(a) + ok(a)
+  spin(3)
+  sleepy()
+  small()

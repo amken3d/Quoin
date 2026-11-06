@@ -48,6 +48,13 @@ func (c *checker) unhandled(e ast.Expr, t *types.Type) {
 	c.d.ErrorFix(e.EPos(), "E107", fmt.Sprintf("%s can fail with %s", name, strings.Join(t.Errs, "|")), fix)
 }
 
+// site counts an operation that needs a runtime check unless proven safe.
+func (c *checker) site() {
+	if c.fn != nil {
+		c.fn.Sites++
+	}
+}
+
 func (c *checker) needCheck(e ast.Expr, what string) {
 	e.Info().Check = true
 	if c.fn != nil {
@@ -324,6 +331,18 @@ func rng(e ast.Expr) (lo, hi *big.Int) {
 	return nil, nil
 }
 
+func typeRange(t *types.Type) (lo, hi *big.Int) {
+	switch t.Kind {
+	case types.Enum:
+		return t.Base.Min(), t.Base.Max()
+	case types.Int:
+		return t.Min(), t.Max()
+	case types.Bool:
+		return big.NewInt(0), big.NewInt(1)
+	}
+	return nil, nil
+}
+
 func within(lo, hi *big.Int, t *types.Type) bool {
 	return lo != nil && hi != nil && t.Fits(lo) && t.Fits(hi)
 }
@@ -406,6 +425,7 @@ func (c *checker) unary(x *ast.Unary, want *types.Type) *types.Type {
 			return t
 		}
 		lo, hi := rng(x.X)
+		c.site()
 		if lo.Cmp(t.Min()) == 0 {
 			c.needCheck(x, "negate")
 		}
@@ -608,6 +628,7 @@ func (c *checker) binary(b *ast.Binary, want *types.Type) *types.Type {
 		}
 	}
 	if isChecked(b.Op) {
+		c.site()
 		switch b.Op {
 		case "/", "%":
 			// Division cannot overflow except MIN / -1; it can divide by zero.
@@ -749,8 +770,11 @@ func (c *checker) shift(b *ast.Binary, want *types.Type) *types.Type {
 			b.I.Const, b.I.Lo, b.I.Hi = v, v, v
 			return tx
 		}
-	} else if _, hy := rng(b.Y); hy == nil || hy.Cmp(bits) >= 0 {
-		c.needCheck(b, "shift amount")
+	} else {
+		c.site()
+		if _, hy := rng(b.Y); hy == nil || hy.Cmp(bits) >= 0 {
+			c.needCheck(b, "shift amount")
+		}
 	}
 	if b.Op == ">>" && !tx.Signed {
 		lx, hx := rng(b.X)
@@ -978,8 +1002,13 @@ func (c *checker) convert(x *ast.Call, target *types.Type, kind ast.CallKind) *t
 	if at.Kind == types.Bool {
 		lo, hi = big.NewInt(0), big.NewInt(1)
 	}
-	if kind == ast.CallConvert && !within(lo, hi, target) {
-		c.needCheck(x, "conversion to "+name)
+	if kind == ast.CallConvert {
+		if tl, th := typeRange(at); !within(tl, th, target) {
+			c.site()
+		}
+		if !within(lo, hi, target) {
+			c.needCheck(x, "conversion to "+name)
+		}
 	}
 	if kind == ast.CallConvert || within(lo, hi, target) {
 		setRange(x, lo, hi, target)
@@ -1002,6 +1031,7 @@ func (c *checker) growMethod(x *ast.Call, fun *ast.Field, gt *types.Type) *types
 		}
 		c.value(x.Args[0], gt.Elem)
 		c.coerce(x.Args[0], gt.Elem, "push")
+		c.site()
 		c.needCheck(x, fmt.Sprintf("push capacity %d", gt.Len))
 		return types.VoidT
 	case "clear":
@@ -1136,6 +1166,8 @@ func (c *checker) field(x *ast.Field) *types.Type {
 				x.I.Const, x.I.Lo, x.I.Hi = v, v, v
 			} else if t.Kind == types.Grow {
 				x.I.Lo, x.I.Hi = big.NewInt(0), big.NewInt(t.Len)
+			} else if id, ok := x.X.(*ast.Ident); ok && id.Sym != nil && c.lenMax[id.Sym] != nil {
+				x.I.Lo, x.I.Hi = big.NewInt(0), c.lenMax[id.Sym]
 			}
 			return types.Usize
 		case "cap":
@@ -1201,9 +1233,13 @@ func (c *checker) index(x *ast.Index) *types.Type {
 			}
 			return t.Elem
 		}
+		c.site()
 		if _, hi := rng(x.I); hi != nil && hi.Cmp(big.NewInt(t.Len)) < 0 {
 			return t.Elem
 		}
+	}
+	if t.Kind != types.Array {
+		c.site()
 	}
 	c.needCheck(x, "index")
 	return t.Elem
@@ -1257,6 +1293,7 @@ func (c *checker) sliceExpr(x *ast.SliceExpr) *types.Type {
 	if x.Lo == nil && x.Hi == nil {
 		return st
 	}
+	c.site()
 	c.needCheck(x, "slice bounds")
 	return st
 }

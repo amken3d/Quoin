@@ -71,7 +71,7 @@ fn name(a: u8, buf: []u8) u16 !Timeout|Overrun where buf.len <= 64
 isr fn USART2_IRQHandler()         // interrupt entry; the C symbol keeps the name
   ...
 
-extern fn delay_us(us: u32) stack 48   // C function; `stack` is its stack bound in bytes
+extern fn delay_us(us: u32) stack 48 cycles 900   // external symbol with its stack and cycle bounds
 ```
 
 `fn main()` is required. `main` and every `isr fn` are entry points: they take no parameters and return nothing (E121), and they cannot be called.
@@ -102,6 +102,23 @@ k() catch e                     // statement form: handler block, `e` is the err
 
 There are no exceptions and no unwinding. `?` and `catch` cannot appear on the right of `&&`/`||` (E119); bind the call first.
 
+## Resource claims
+
+A function can claim worst-case bounds in its `where` clause:
+
+```
+fn toggle() where cycles <= 20, stack <= 16
+  SIO.GPIO_OUT_XOR = u32(1) << LED
+```
+
+- `stack <= N`: the function's own frame plus its deepest callee chain, in bytes. Proven on native targets (exact frames) and on the C target with `quoinc stack --su`; otherwise W301.
+- `cycles <= N`: the worst-case cycle count over all paths, including callees and, for an `isr`, the exception entry. Proven only on native targets (`--target rp2350`, `m33-qemu`); the C target reports W301.
+- A failed claim is E301/E302, and its fix line gives the proven number. A function with no finite bound gets E303, which names the loop or call responsible.
+
+Loop bounds come from the code itself: constant ranges, the ranges of integer types, array and grow-array lengths, and `where p.len <= N` clauses for slice parameters (checked at entry, so the bound is sound). `for cond` and bare `for` loops have no bound. Use a counted loop (`for i in 0..N`) for anything that must be bounded, such as polling with a timeout.
+
+An `extern fn` declares its bounds instead of claiming them: `stack N` and `cycles N` after the signature. A reachable extern without `stack` is E203; without `cycles`, anything that calls it has no cycle bound.
+
 ## Statements
 
 ```
@@ -109,7 +126,7 @@ x := expr                 // define with inferred type
 var y: u8                 // define, zero value
 var z: u8 = 3             // define with explicit type
 y = expr                  // assign
-y += 1                    // also -= *= /= %= &= |= ^= <<= >>=
+y += 1                    // also -= *= /= %= &= |= ^= <<= >>= +%= -%= *%= +|= -|= *|=
 if c
   ...
 else if d
@@ -156,7 +173,7 @@ Arithmetic is checked by default:
 - `<<` discards bits shifted out; `>>` is arithmetic on signed types. The shift amount must be unsigned and smaller than the width (checked).
 - Both operands of a binary operator have the same type after widening (E104).
 
-The compiler drops a check when it can prove the operation safe from constants, masks and loop bounds. For example `u16(a) + u16(b)` with `a, b: u8` has no overflow check, and `arr[i]` inside `for i in 0..arr.len` has no bounds check. Every check it keeps is counted in the `CHECKS` line; `--checks` lists them.
+The compiler drops a check when it can prove the operation safe from constants, masks, loop bounds, `where p.len <= N` clauses, and `:=` bindings that are never reassigned (they keep the range of their initial value). For example `u16(a) + u16(b)` with `a, b: u8` has no overflow check, and `arr[i]` inside `for i in 0..arr.len` has no bounds check. Every check it keeps is counted in the `CHECKS` line; `--checks` lists them.
 
 ## Memory model
 
@@ -216,11 +233,21 @@ on := GPIOA.ODR.P5            // volatile read, then extract
 fn blink(g: Gpio)             // register blocks pass by reference
 ```
 
-Offsets must be aligned and increasing; bitfields must fit their register and not overlap (E120). Enum literals (`.Out`) take their enum type from context. Every register read happens exactly once, in source order.
+Offsets must be aligned and increasing; bitfields must fit their register and not overlap (E120). Bitfield writes are read-modify-write (a load, `BFI`, and a store on native targets); they are not atomic with respect to interrupts. Enum literals (`.Out`) take their enum type from context. Every register read happens exactly once, in source order.
 
 ## Evaluation order
 
 Operands and arguments are evaluated left to right, including calls and register reads. C leaves this unspecified; the generated code fixes it with temporaries. `&&` and `||` short-circuit.
+
+## Targets
+
+| `--target` | Output | Claims proven |
+| --- | --- | --- |
+| `c` (default) | C99 + `quoin_rt.h` + linker fragment, for any toolchain | stack (estimated, or exact with `quoinc stack --su`) |
+| `rp2350` | Thumb-2 assembly, linked with GNU `as`/`ld` into an SRAM-resident ELF and UF2 | stack (exact) and cycles (model) |
+| `m33-qemu` | the same code for QEMU's mps2-an505 (Cortex-M33); `quoinc run` executes it and reports measured stack | stack (exact) and cycles (model) |
+
+On native targets an `isr fn` must be named after a vector: on `rp2350` the pico-sdk interrupt names (`TIMER0_IRQ_0`, `UART0_IRQ`, `I2C1_IRQ`, ...) or a core exception (`SysTick`, `PendSV`, `SVCall`, `HardFault`, `NMI`). The native backend does not support 64-bit integers yet (E208); extern parameters must be scalars, slices or register blocks.
 
 ## Compiler output
 
@@ -235,3 +262,4 @@ CHECKS runtime=2 push=1 where=1
 - After a syntax error, only syntax errors are reported, one per top-level declaration.
 - `STACK` gives each entry point's worst-case call stack (isrs include the 32-byte exception frame; use `--exc-frame 104` for an FPU context), the total data stack, and the sum. The total assumes every isr can preempt main and each other. `src=est` marks estimated call frames; `quoinc stack --su` replaces them with gcc's `-fstack-usage` numbers (`src=su`). Data-stack figures are exact either way.
 - `--budget N` turns an over-budget total into E202.
+- On native targets `CYCLES` gives each entry point's worst-case cycles (`noreturn` for a `main` that never returns, `isr:NAME=handler+entry` for interrupts) under the uncalibrated Cortex-M33 model. `-v` lists every function.

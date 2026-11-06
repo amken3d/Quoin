@@ -1,0 +1,29 @@
+// kernel: isort
+// Insertion sort of 16 values, reverse-sorted input (the worst case).
+// The inner loop's trip count depends on the outer index: per-loop bounds
+// over-estimate it, which the bound-tightness metric should show.
+extern fn emitu(v: u32) stack 32 cycles 400
+
+fn isort(a: []u16) where a.len <= 16
+  for i in 1..a.len
+    var j: usize = i
+    for k in 0..i
+      if a[j - 1] <= a[j]
+        break
+      t := a[j]
+      a[j] = a[j - 1]
+      a[j - 1] = t
+      j -= 1
+
+fn main()
+  var a: [16]u16
+  for i in 0..16
+    a[i] = u16(1600 - i * 100)
+  isort(a)
+  var h: u32 = 0
+  for i, v in a
+    h = h *% 31 +% u32(v) *% u32(i + 1)
+  emitu(h)
+
+// want:
+// 3349615904

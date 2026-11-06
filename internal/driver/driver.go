@@ -13,6 +13,8 @@ import (
 	"github.com/amken3d/quoin/internal/diag"
 	"github.com/amken3d/quoin/internal/parser"
 	"github.com/amken3d/quoin/internal/stack"
+	"github.com/amken3d/quoin/internal/thumb"
+	"github.com/amken3d/quoin/internal/types"
 )
 
 // Source is one input file.
@@ -25,7 +27,8 @@ type Source struct {
 type Options struct {
 	Budget   int64
 	SU       map[string]int64
-	ExcFrame int64 // bytes pushed per interrupt; 0 means 32 (no FPU context)
+	ExcFrame int64  // bytes pushed per interrupt; 0 means 32 (no FPU context)
+	Target   string // "c" (default), "rp2350" or "m33-qemu"
 	Lines    bool
 	Emit     bool // generate C
 }
@@ -37,6 +40,10 @@ type Result struct {
 	Report  *stack.Report
 	C       string
 	LD      string
+	// Native targets.
+	Asm    string
+	Target *thumb.Target
+	Bounds map[*types.Fn]thumb.Bound
 }
 
 // Compile runs the pipeline over all sources as one program.
@@ -53,8 +60,20 @@ func Compile(srcs []Source, opt Options) *Result {
 		return r
 	}
 	r.Program = check.Check(files, &r.Diags)
+	if tgt, ok := thumb.Targets[opt.Target]; ok && !r.Diags.HasErrors() {
+		r.native(tgt, opt)
+		r.Diags.Sort()
+		return r
+	}
+	if opt.Target != "" && opt.Target != "c" && thumb.Targets[opt.Target] == nil {
+		r.Diags.ErrorFix(diag.Pos{Line: 1, Col: 1}, "E208", "unknown target "+opt.Target, "use c, rp2350 or m33-qemu")
+		return r
+	}
 	if !r.Diags.HasErrors() {
 		r.Report = stack.Analyze(r.Program, stack.Options{Budget: opt.Budget, SU: opt.SU, ExcFrame: opt.ExcFrame}, &r.Diags)
+		if r.Report.Valid {
+			r.checkClaims(false)
+		}
 	}
 	r.Diags.Sort()
 	if opt.Emit && !r.Diags.HasErrors() && r.Report != nil && r.Report.Valid {

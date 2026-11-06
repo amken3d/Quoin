@@ -1,0 +1,5 @@
+fn f() u32 where cycles <= 100 //! W301
+  return 1
+
+fn main()
+  x := f()

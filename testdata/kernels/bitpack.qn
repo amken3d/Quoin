@@ -1,0 +1,26 @@
+// kernel: pack
+// Pack 32 nibbles into four words. Every index, shift and conversion is
+// proven in range: no runtime checks should remain.
+extern fn emitu(v: u32) stack 32 cycles 400
+
+fn pack(nib: [32]u8) [4]u32
+  var out: [4]u32
+  for i in 0..32
+    w := i >> 3
+    sh := u32(i & 7) * 4
+    out[w] = out[w] | (u32(nib[i] & 0xF) << sh)
+  return out
+
+fn main()
+  var n: [32]u8
+  for i in 0..32
+    n[i] = u8(i) *% 7
+  w := pack(n)
+  for v in w
+    emitu(v)
+
+// want:
+// 440163952
+// 2461325048
+// 440163952
+// 2461325048

@@ -1,5 +1,6 @@
 // Arithmetic semantics: checked by default, explicit wrap and saturate.
-extern fn emit(v: i64) stack 64
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
 
 const K = 7
 
@@ -30,11 +31,8 @@ fn main()
   emit(K * 6)           // 42
   emit(i32(c) / 7)      // -14
   emit(i32(c) % 7)      // -2
-  var big: u64 = 18446744073709551615
-  emit(i64(big >> 1))   // 9223372036854775807
-  emit(i64.wrap(big))   // -1
   var n: u32 = 3
-  emit(u32(1) << n)     // 8
+  emitu(u32(1) << n)    // 8
   emit(a + b)           // traps: 300 overflows u8
 
 // want:
@@ -58,7 +56,5 @@ fn main()
 // 42
 // -14
 // -2
-// 9223372036854775807
-// -1
 // 8
 // trap

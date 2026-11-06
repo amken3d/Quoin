@@ -1,5 +1,6 @@
 // Error unions, catch forms, grow arrays, slices, structs, enums, queues.
-extern fn emit(v: i64) stack 64
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
 
 error TooBig, Odd
 
@@ -49,19 +50,19 @@ fn norm(p: Point) i32
   return p.x * p.x + p.y * p.y
 
 fn main()
-  emit(quarter(40) catch 999)            // 10
-  emit(quarter(42) catch 999)            // 999 (21 is odd)
+  emitu(quarter(40) catch 999)            // 10
+  emitu(quarter(42) catch 999)            // 999 (21 is odd)
   quarter(5000) catch e
     if e == TooBig
       emit(-1)                           // -1
   v := quarter(8) catch 0
-  emit(v)                                // 2
+  emitu(v)                               // 2
   var tab: [4]u16 = TABLE
-  emit(sum(tab[1..3]))                   // 110
+  emitu(sum(tab[1..3]))                   // 110
   var arr: [4]u16 = TABLE
   arr[0] = 7
-  emit(sum(arr))                         // 1117
-  emit(nested())                         // 0*0+2*1+4*2+6*3+8*4 + 5 = 65
+  emitu(sum(arr))                         // 1117
+  emitu(nested())                         // 0*0+2*1+4*2+6*3+8*4 + 5 = 65
   p := Point{x: 3, y: -4}
   emit(norm(p))                          // 25
   c := Color.Blue
@@ -77,9 +78,9 @@ fn main()
   var k: u32 = 0
   for k < 3
     k += 1
-  emit(k)                                // 3
+  emitu(k)                               // 3
   ticks += 1
-  emit(ticks)                            // 1
+  emitu(ticks)                            // 1
   emit(TABLE[k])                         // 1000
   emit(arr[k + 1])                       // traps: index 4 out of range
 

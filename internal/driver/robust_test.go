@@ -29,6 +29,7 @@ func TestNoPanics(t *testing.T) {
 				}
 			}()
 			Compile([]Source{{Name: "x.qn", Text: []byte(text)}}, Options{Emit: true})
+			Compile([]Source{{Name: "x.qn", Text: []byte(text)}}, Options{Target: "rp2350"})
 		}
 		for i := range lines {
 			try("prefix", strings.Join(lines[:i], "\n"))

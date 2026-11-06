@@ -1,0 +1,21 @@
+// 64-bit arithmetic (C backend only for now).
+// targets: c
+extern fn emit64(v: i64) stack 64
+
+fn main()
+  var big: u64 = 18446744073709551615
+  emit64(i64(big >> 1))
+  emit64(i64.wrap(big))
+  var s: i64 = -9223372036854775807
+  emit64(s -| 10)
+  emit64(i64(big / 3))
+  emit64(i64(u32.sat(big)))
+  emit64(s - 2)
+
+// want:
+// 9223372036854775807
+// -1
+// -9223372036854775808
+// 6148914691236517205
+// 4294967295
+// trap

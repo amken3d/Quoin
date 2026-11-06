@@ -1,0 +1,124 @@
+// Calling convention, aggregates and odd widths: the native backend's
+// trickiest paths, checked against the C backend's output.
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+
+error Neg
+
+struct Pair
+  a: i16
+  b: u8
+  c: i32
+
+// Seven words of arguments: three go on the stack.
+fn many(a: u8, b: u16, s: []u8, c: i32, d: i32, e: u32) i32
+  var t: i32 = i32(a) + i32(b) + c + d + i32(e)
+  for x in s
+    t += i32(x)
+  return t
+
+fn mk(a: i16, c: i32) Pair
+  return Pair{a: a, b: 7, c: c}
+
+fn checked(p: Pair) Pair !Neg
+  if p.c < 0
+    return Neg
+  var q: Pair = p
+  q.c = p.c * 2
+  return q
+
+fn widths()
+  var a: u20 = 1048000
+  emitu(a +% 1000)            // 424
+  emitu(a +| 1000)            // 1048575
+  var b: i24 = -8388000
+  emit(b -| 1000)             // -8388608
+  emit(b -% 1000)             // 8388216
+  var c: u20 = 1000
+  emitu(c *| 2000)            // 1048575
+  var d: i24 = -3000
+  emit(d *| 3000)             // -8388608
+  emit(d * 2)                 // -6000
+  var e: u32 = 4000000000
+  emitu(e +| 500000000)       // 4294967295
+  emitu(e *| 2)               // 4294967295
+  var f: i32 = 2000000000
+  emit(f +| f)                // 2147483647
+  emit(-f -| f)               // -2147483648
+  emit(f *| -2)               // -2147483648
+  emit(i32(-7) / 2)           // -3
+  emit(i32(-7) % 2)           // -1
+  emitu(u32(7) % 3)           // 1
+  var g: i8 = -128
+  emit(i32(g) >> 1)           // -64
+  emit(g >> 3)                // -16
+  emitu(u8.sat(e))            // 255
+  emit(i8.sat(f))             // 127
+  emitu(u16.sat(d))           // 0
+  emit(i16.wrap(e))           // 10240
+  if d < 0 && e > 3000000000
+    emit(1)                   // 1
+  if !(c >= 1001) || e < 1
+    emit(2)                   // 2
+
+fn grow_chain(depth: u8) u32
+  var g: grow [6]u16
+  for i in 0..depth
+    g.push(u16(i) * 100)
+  var s: u32 = 0
+  for v in g
+    s += v
+  return s
+
+fn main()
+  var buf: [3]u8 = [10, 20, 30]
+  emit(many(1, 2, buf, 3, 4, 5))            // 75
+  p := mk(-5, 21)
+  emit(p.a)                                 // -5
+  emitu(p.b)                                // 7
+  q := checked(p) catch Pair{a: 0, b: 0, c: -1}
+  emit(q.c)                                 // 42
+  r := checked(mk(1, -3)) catch Pair{a: 0, b: 0, c: -1}
+  emit(r.c)                                 // -1
+  var ps: [2]Pair
+  ps[1] = p
+  ps[1].c += 100
+  emit(ps[1].c)                             // 121
+  emit(ps[0].c)                             // 0
+  widths()
+  emitu(grow_chain(4))                      // 600
+  emitu(grow_chain(7))                      // traps: push 7 into grow [6]
+
+// want:
+// 75
+// -5
+// 7
+// 42
+// -1
+// 121
+// 0
+// 424
+// 1048575
+// -8388608
+// 8388216
+// 1048575
+// -8388608
+// -6000
+// 4294967295
+// 4294967295
+// 2147483647
+// -2147483648
+// -2147483648
+// -3
+// -1
+// 1
+// -64
+// -16
+// 255
+// 127
+// 0
+// 10240
+// 1
+// 2
+// 600
+// trap

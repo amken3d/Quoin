@@ -54,6 +54,13 @@ var Codes = []Code{
 	{"E206", "NoEntry", "The program has no `fn main()`."},
 	{"E207", "NoStackUsage", "`quoinc stack` found no -fstack-usage entry for an entry point. Compile every generated .c with -fstack-usage and pass all .su files. Static functions missing from the .su files are treated as inlined."},
 
+	{"E208", "UnsupportedOnTarget", "The selected target cannot compile this construct yet (for example 64-bit integers on the thumb backend), or an isr is not named after one of the target's vectors."},
+
+	{"E301", "CycleClaimFailed", "The proven worst-case cycle count of a function exceeds its `where cycles <= N` claim. The message gives the bound; raise the claim or remove work from the worst path."},
+	{"E302", "StackClaimFailed", "The proven worst-case stack (own frame plus deepest callee chain) exceeds the `where stack <= N` claim."},
+	{"E303", "CyclesUnbounded", "A function claims `cycles <= N` but has no finite bound: a `for` without a bound, a slice loop without a `where s.len <= N`, or a call to something unbounded (including externs without `cycles N`)."},
+	{"W301", "ClaimNotChecked", "Cycle claims are only proven on native targets (--target rp2350 or m33-qemu); the C backend cannot see the final instructions."},
+
 	{"W101", "RuntimeCheck", "An index, push, conversion or arithmetic step could not be proven at compile time; a runtime check that calls ql_trap() was inserted."},
 }
 

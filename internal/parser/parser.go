@@ -339,7 +339,18 @@ func (p *parser) fnDecl() *ast.FnDecl {
 	if p.isKw("where") {
 		p.next()
 		for {
-			d.Where = append(d.Where, p.expr())
+			t := p.tok()
+			isClaim := (t.Kind == lexer.Ident && t.Text == "cycles" || t.Kind == lexer.Keyword && t.Text == "stack") &&
+				p.peekN(1).Kind == lexer.Op && (p.peekN(1).Text == "<=" || p.peekN(1).Text == "<")
+			if isClaim {
+				p.next()
+				if p.next().Text == "<" {
+					p.fail(t.Pos, "resource claims use <=", "write `"+t.Text+" <= N`")
+				}
+				d.Claims = append(d.Claims, ast.Claim{P: t.Pos, Kind: t.Text, Limit: p.unary()})
+			} else {
+				d.Where = append(d.Where, p.expr())
+			}
 			if !p.isOp(",") {
 				break
 			}
@@ -349,6 +360,10 @@ func (p *parser) fnDecl() *ast.FnDecl {
 	if p.isKw("stack") {
 		p.next()
 		d.Stack = p.expr()
+	}
+	if t := p.tok(); t.Kind == lexer.Ident && t.Text == "cycles" {
+		p.next()
+		d.Cycles = p.expr()
 	}
 	if p.isKw("extern") {
 		p.failHere("newline")
@@ -495,7 +510,8 @@ func (p *parser) noBlockCatch(x ast.Expr) {
 
 func isAssignOp(s string) bool {
 	switch s {
-	case "=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=":
+	case "=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=",
+		"+%=", "-%=", "*%=", "+|=", "-|=", "*|=":
 		return true
 	}
 	return false

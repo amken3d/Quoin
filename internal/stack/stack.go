@@ -32,6 +32,7 @@ type Options struct {
 	Budget   int64            // 0: no budget
 	SU       map[string]int64 // C function -> frame bytes, from gcc -fstack-usage
 	ExcFrame int64            // bytes the core pushes per interrupt; default ExceptionFrame
+	Source   string           // label for the call-frame source; default "est" or "su"
 }
 
 // Frame is one function on a worst-case path.
@@ -60,6 +61,9 @@ type Report struct {
 	Checks    map[string]int
 	NChecks   int
 	Valid     bool // false when recursion or unknown extern stacks prevent a bound
+	// FnCall is the worst-case call-stack bytes of every function reached
+	// from an entry point (its frame plus its deepest callee chain).
+	FnCall map[*types.Fn]int64
 }
 
 type result struct {
@@ -88,6 +92,9 @@ func Analyze(p *check.Program, opt Options, d *diag.List) *Report {
 	if opt.SU != nil {
 		r.Source = "su"
 	}
+	if opt.Source != "" {
+		r.Source = opt.Source
+	}
 	if !a.acyclic() {
 		r.Valid = false
 		return r
@@ -104,6 +111,10 @@ func Analyze(p *check.Program, opt Options, d *diag.List) *Report {
 	}
 	r.Total = r.CallTotal + r.DataTotal
 	r.Valid = a.valid
+	r.FnCall = map[*types.Fn]int64{}
+	for fn, res := range a.memo {
+		r.FnCall[fn] = res.call
+	}
 	seen := map[*types.Fn]bool{}
 	for _, e := range p.Entries {
 		for _, fn := range reach(e) {

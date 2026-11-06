@@ -1,5 +1,6 @@
 // Quoin evaluates operands and arguments left to right, calls included.
-extern fn emit(v: i64) stack 64
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
 
 var log: grow [8]u8
 

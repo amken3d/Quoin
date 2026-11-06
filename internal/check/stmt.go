@@ -59,13 +59,28 @@ func (c *checker) body(fd *ast.FnDecl) {
 		c.cur.syms[p.Name] = p
 		c.frame += slot(p.Type)
 	}
+	c.lenMax = map[*types.Symbol]*big.Int{}
+	c.assigned = assignedNames(fd.Body)
 	for _, w := range fd.Where {
 		t := c.value(w, types.BoolT)
 		if t.Kind != types.Invalid && t.Kind != types.Bool {
 			c.d.Errorf(w.EPos(), "E104", "where clause must be bool, got %s", t)
 			continue
 		}
+		c.site()
 		c.needCheck(w, "where clause")
+		// `p.len <= N` (checked at entry) bounds p.len for the body.
+		if b, ok := w.(*ast.Binary); ok && (b.Op == "<=" || b.Op == "<") {
+			if f, ok := b.X.(*ast.Field); ok && f.Kind == ast.FieldLen {
+				if id, ok := f.X.(*ast.Ident); ok && id.Sym != nil && id.Sym.Kind == types.SymParam && b.Y.Info().Const != nil {
+					n := new(big.Int).Set(b.Y.Info().Const)
+					if b.Op == "<" {
+						n.Sub(n, big.NewInt(1))
+					}
+					c.lenMax[id.Sym] = n
+				}
+			}
+		}
 	}
 	c.stmts(fd.Body.Stmts)
 	if fn.Ret.Kind != types.Void && fn.Ret.Kind != types.Invalid && !terminates(fd.Body) {
@@ -117,6 +132,11 @@ func (c *checker) stmt(s ast.Stmt) {
 		s.Sym = c.declareLocal(s.Name, s.P, t)
 		if s.Sym != nil && (t.Kind == types.Slice || t.Kind == types.Regs) {
 			s.Sym.Immutable = true
+		}
+		// A binding that is never assigned again keeps its initial range:
+		// locals cannot be aliased, so nothing else can change it.
+		if s.Sym != nil && t.Kind == types.Int && !c.assigned[s.Name] {
+			s.Sym.Lo, s.Sym.Hi = rng(s.Value)
 		}
 	case *ast.VarStmt:
 		t := c.typ(s.Type)
@@ -313,6 +333,7 @@ func (c *checker) assign(s *ast.AssignStmt) {
 			}
 			return
 		}
+		c.site()
 		if _, hi := rng(s.RHS); hi == nil || hi.Cmp(big.NewInt(int64(lt.Bits))) >= 0 {
 			s.Check = true
 			c.fn.Checks = append(c.fn.Checks, types.CheckSite{Pos: s.P, What: "shift amount"})
@@ -324,6 +345,7 @@ func (c *checker) assign(s *ast.AssignStmt) {
 		return
 	}
 	if isChecked(op) {
+		c.site()
 		need := true
 		if op == "/" || op == "%" {
 			ly, hy := rng(s.RHS)
@@ -402,6 +424,43 @@ func kindName(k types.SymKind) string {
 		return "peripheral"
 	}
 	return "name"
+}
+
+// assignedNames collects every plain name that is the target of an
+// assignment anywhere in b. Quoin has no shadowing, so names identify
+// locals uniquely within a function.
+func assignedNames(b *ast.Block) map[string]bool {
+	out := map[string]bool{}
+	var walk func(ss []ast.Stmt)
+	walk = func(ss []ast.Stmt) {
+		for _, s := range ss {
+			switch x := s.(type) {
+			case *ast.AssignStmt:
+				if id, ok := x.LHS.(*ast.Ident); ok {
+					out[id.Name] = true
+				}
+			case *ast.Block:
+				walk(x.Stmts)
+			case *ast.IfStmt:
+				walk(x.Then.Stmts)
+				if x.Else != nil {
+					walk([]ast.Stmt{x.Else})
+				}
+			case *ast.ForStmt:
+				walk(x.Body.Stmts)
+			}
+			for _, e := range ast.StmtExprs(s) {
+				ast.WalkExpr(e, func(e ast.Expr) bool {
+					if c, ok := e.(*ast.Catch); ok && c.Body != nil {
+						walk(c.Body.Stmts)
+					}
+					return true
+				})
+			}
+		}
+	}
+	walk(b.Stmts)
+	return out
 }
 
 // terminates reports whether control cannot fall off the end of s.

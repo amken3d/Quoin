@@ -347,22 +347,27 @@ type Symbol struct {
 
 // Fn is the semantic record of a function.
 type Fn struct {
-	Name      string
-	CName     string
-	Params    []*Symbol
-	Ret       *Type    // result value type (Void if none)
-	Errs      []string // declared error set; nil means infallible
-	ISR       bool
-	Extern    bool
-	Main      bool
-	StackDecl int64 // extern: declared stack bytes, -1 if unknown
-	Pos       diag.Pos
-	Decl      any
+	Name       string
+	CName      string
+	Params     []*Symbol
+	Ret        *Type    // result value type (Void if none)
+	Errs       []string // declared error set; nil means infallible
+	ISR        bool
+	Extern     bool
+	Main       bool
+	StackDecl  int64 // extern: declared stack bytes, -1 if unknown
+	CyclesDecl int64 // extern: declared worst-case cycles, -1 if unknown
+	// Resource claims from `where cycles <= N` / `where stack <= N`; 0 = none.
+	ClaimCycles, ClaimStack int64
+	ClaimPos                diag.Pos
+	Pos                     diag.Pos
+	Decl                    any
 
 	Calls     []Call      // direct calls, in source order
 	DataFrame int64       // bytes of data stack this function claims
 	FrameEst  int64       // estimated C call-stack frame bytes
 	Checks    []CheckSite // runtime checks inserted
+	Sites     int         // operations that would need a check without proof
 	Globals   map[*Symbol]GlobalUse
 	QueueUses map[*Symbol]QueueUse
 }
