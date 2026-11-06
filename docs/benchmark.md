@@ -45,6 +45,12 @@ The same harness drives every language. Only the spec file, compiler command and
 
 What it means: on tasks this easy, nothing is left for Quoin to save, and the spec is pure overhead charged on every turn. Quoin can only win where C solutions need several more turns than Quoin's. The next pilot needs tasks where that happens (subtle overflow and bounds bugs, tight stack budgets, cycle claims) and a much shorter spec.
 
+**Second pilot ([summary](../bench/results/pilot2-summary.md)):** a short brief ([brief.md](brief.md), 2,061 tokens with platform notes) and 8 harder tasks built around classic firmware traps.
+
+- The brief halves Quoin's cost: 3,399 median tokens on the hard set instead of 6,776 with the full reference. After two documentation gaps were fixed (v2), it passed 54 of 54 runs on the first turn.
+- C still wins: 1,350 on the hard set, a 2.5× gap. Claude Opus 5.5 did not fall into a single trap in C (0 wrong outputs, traps or stack overruns in 54 runs), so there were no retries for Quoin to save.
+- In dollars, with the cached spec at its real price, Quoin is at 1.3× C on the hard set and 1.1× on the easy set.
+
 ### Task layout
 
 ```

@@ -51,16 +51,24 @@ func runQEMU(ctx context.Context, dir, elf string, input []byte, timeout time.Du
 			return nil, -1, -1, false, err
 		}
 	}
+	// The measured stack is call stack plus Quoin's data stack (grow
+	// locals), so moving a buffer onto the data stack does not dodge the
+	// budget. C programs have no data stack (0).
 	var lines []string
-	var hw int64 = -1
+	var hw, dhw int64 = -1, 0
 	for _, l := range strings.Split(strings.TrimRight(out.String(), "\n"), "\n") {
 		switch {
 		case strings.HasPrefix(l, "STACKHW "):
 			hw, _ = strconv.ParseInt(strings.TrimPrefix(l, "STACKHW "), 10, 64)
-		case strings.HasPrefix(l, "DSTACKHW "), l == "":
+		case strings.HasPrefix(l, "DSTACKHW "):
+			dhw, _ = strconv.ParseInt(strings.TrimPrefix(l, "DSTACKHW "), 10, 64)
+		case l == "":
 		default:
 			lines = append(lines, l)
 		}
+	}
+	if hw >= 0 {
+		hw += dhw
 	}
 	return lines, code, hw, false, nil
 }
@@ -116,7 +124,7 @@ func judge(ctx context.Context, dir, elf string, t *Task, input []byte) (Verdict
 			"\nYour output:\n" + clip(got, 40)}, nil
 	}
 	if hw > t.StackBound {
-		return Verdict{Kind: "stack", StackHW: hw, Feedback: fmt.Sprintf("Correct output, but the measured stack use was %d bytes; the budget is %d bytes.",
+		return Verdict{Kind: "stack", StackHW: hw, Feedback: fmt.Sprintf("Correct output, but the measured stack use (call stack plus data stack) was %d bytes; the budget is %d bytes.",
 			hw, t.StackBound)}, nil
 	}
 	return Verdict{Pass: true, Kind: "pass", StackHW: hw}, nil

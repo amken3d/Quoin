@@ -202,6 +202,12 @@ func (tc *toolchain) langs(repo string) (map[string]*Lang, error) {
 		}
 		return elf, "", true
 	}
+	brief, err := os.ReadFile(filepath.Join(repo, "docs", "brief.md"))
+	if err != nil {
+		return nil, err
+	}
+	// Same compiler and references as the full-spec arm; only the prompt differs.
+	quoinBrief := &Lang{Name: "quoin-brief", Ext: ".qn", Spec: systemPreamble + string(brief) + "\n" + quoinPlatform, Build: quoin.Build}
 	c := &Lang{Name: "c", Ext: ".c", Spec: systemPreamble + cPlatform}
 	c.Build = func(ctx context.Context, dir, src string) (string, string, bool) {
 		os.WriteFile(filepath.Join(dir, "prog.c"), []byte(src), 0o644)
@@ -214,7 +220,7 @@ func (tc *toolchain) langs(repo string) (map[string]*Lang, error) {
 		}
 		return elf, "", true
 	}
-	return map[string]*Lang{"quoin": quoin, "c": c}, nil
+	return map[string]*Lang{"quoin": quoin, "quoin-brief": quoinBrief, "c": c}, nil
 }
 
 // stripSummary drops quoinc's STACK/CYCLES/CHECKS lines from failure output

@@ -27,6 +27,7 @@ import (
 func main() {
 	mode := flag.String("mode", "selftest", "selftest | run")
 	taskList := flag.String("tasks", "all", "comma-separated task names, or all")
+	set := flag.String("set", "easy", "task set: easy, hard or all")
 	langList := flag.String("langs", "quoin,c", "comma-separated language arms")
 	seeds := flag.Int("seeds", 3, "independent runs per task and language")
 	iters := flag.Int("iters", 6, "maximum model turns per run")
@@ -49,10 +50,21 @@ func main() {
 	langs, err := tc.langs(*repo)
 	check(err)
 
+	var pool []Task
+	switch *set {
+	case "easy":
+		pool = tasks
+	case "hard":
+		pool = hardTasks
+	case "all":
+		pool = append(append([]Task{}, tasks...), hardTasks...)
+	default:
+		check(fmt.Errorf("unknown set %q", *set))
+	}
 	var ts []*Task
-	for i := range tasks {
-		if *taskList == "all" || contains(strings.Split(*taskList, ","), tasks[i].Name) {
-			ts = append(ts, &tasks[i])
+	for i := range pool {
+		if *taskList == "all" || contains(strings.Split(*taskList, ","), pool[i].Name) {
+			ts = append(ts, &pool[i])
 		}
 	}
 	var ls []*Lang
@@ -68,6 +80,19 @@ func main() {
 	switch *mode {
 	case "selftest":
 		os.Exit(selftest(ctx, tc, ts, ls, cfg))
+	case "count":
+		key := os.Getenv("QUOIN_PILOT_API_KEY")
+		if key == "" {
+			check(fmt.Errorf("QUOIN_PILOT_API_KEY is not set"))
+		}
+		for name, n := range specTokens(ctx, newAnthropic(key, *model, *effort), ls) {
+			fmt.Printf("%-12s %d tokens\n", name, n)
+		}
+		return
+	case "report":
+		// Rebuild report.md from a results directory's runs.jsonl and summary.json.
+		check(rebuild(*out, ts, ls, cfg))
+		return
 	case "run":
 	default:
 		check(fmt.Errorf("unknown mode %q", *mode))
@@ -148,7 +173,7 @@ func main() {
 	})
 	meta := map[string]any{
 		"date": time.Now().UTC().Format(time.RFC3339), "model": *model, "effort": *effort, "seeds": *seeds,
-		"max_iters": *iters, "ceiling": *ceiling, "vectors": *vectors, "stopped_by_budget": stopped,
+		"max_iters": *iters, "ceiling": *ceiling, "vectors": *vectors, "stopped_by_budget": stopped, "set": *set,
 		"spec_tokens": specTokens(ctx, prov, ls), "ref_tokens": refTokens(ctx, prov, ts, ls),
 	}
 	md := report(runs, ts, ls, cfg, meta)
@@ -156,6 +181,64 @@ func main() {
 	b, _ := json.MarshalIndent(map[string]any{"meta": meta, "runs": summarize(runs)}, "", "  ")
 	check(os.WriteFile(filepath.Join(dir, "summary.json"), b, 0o644))
 	fmt.Println(md)
+}
+
+func rebuild(dir string, ts []*Task, ls []*Lang, cfg config) error {
+	data, err := os.ReadFile(filepath.Join(dir, "summary.json"))
+	if err != nil {
+		return err
+	}
+	var sum struct {
+		Meta map[string]any `json:"meta"`
+	}
+	if err := json.Unmarshal(data, &sum); err != nil {
+		return err
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, "runs.jsonl"))
+	if err != nil {
+		return err
+	}
+	var runs []Run
+	for _, l := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		var r Run
+		if err := json.Unmarshal([]byte(l), &r); err != nil {
+			return err
+		}
+		runs = append(runs, r)
+	}
+	sort.Slice(runs, func(i, k int) bool {
+		a, b := runs[i], runs[k]
+		if a.Task != b.Task {
+			return a.Task < b.Task
+		}
+		if a.Lang != b.Lang {
+			return a.Lang < b.Lang
+		}
+		return a.Seed < b.Seed
+	})
+	// JSON numbers decode as float64; restore the typed maps report expects.
+	if st, ok := sum.Meta["spec_tokens"].(map[string]any); ok {
+		m := map[string]int64{}
+		for k, v := range st {
+			m[k] = int64(v.(float64))
+		}
+		sum.Meta["spec_tokens"] = m
+	}
+	if rt, ok := sum.Meta["ref_tokens"].(map[string]any); ok {
+		m := map[string]map[string]int64{}
+		for t, inner := range rt {
+			m[t] = map[string]int64{}
+			for k, v := range inner.(map[string]any) {
+				m[t][k] = int64(v.(float64))
+			}
+		}
+		sum.Meta["ref_tokens"] = m
+	}
+	cfg.ceiling = int64(sum.Meta["ceiling"].(float64))
+	cfg.vectors = int(sum.Meta["vectors"].(float64))
+	md := report(runs, ts, ls, cfg, sum.Meta)
+	fmt.Println(md)
+	return os.WriteFile(filepath.Join(dir, "report.md"), []byte(md), 0o644)
 }
 
 func contains(xs []string, x string) bool {

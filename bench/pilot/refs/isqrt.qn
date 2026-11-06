@@ -1,0 +1,21 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+fn isqrt(v: u32) u32
+  var lo: u32 = 0
+  var hi: u32 = 65536
+  for hi - lo > 1
+    m := (lo + hi) / 2
+    if m <= v / m
+      lo = m
+    else
+      hi = m
+  return lo
+
+fn main()
+  for k in 0..input_len() / 4
+    b := 4 * k
+    v := u32(input_byte(b)) | (u32(input_byte(b + 1)) << 8) | (u32(input_byte(b + 2)) << 16) | (u32(input_byte(b + 3)) << 24)
+    emitu(isqrt(v))

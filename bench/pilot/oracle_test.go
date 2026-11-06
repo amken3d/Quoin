@@ -20,10 +20,11 @@ func TestOracleRejects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	all := append(append([]Task{}, tasks...), hardTasks...)
 	find := func(name string) *Task {
-		for i := range tasks {
-			if tasks[i].Name == name {
-				return &tasks[i]
+		for i := range all {
+			if all[i].Name == name {
+				return &all[i]
 			}
 		}
 		t.Fatalf("no task %s", name)
@@ -41,6 +42,8 @@ func TestOracleRejects(t *testing.T) {
 		{"faults on a bad address", "crc16", "c", hdr + `int main(void){*(volatile uint32_t*)0xFFFFFFF0u=1;return 0;}`, "fault"},
 		{"Quoin overflow check traps", "movavg", "quoin", qhdr + "fn main()\n  n := input_len()\n  for i in 3..n\n    var s: u8 = input_byte(i)\n    s += input_byte(i - 1)\n    s += input_byte(i - 2)\n    s += input_byte(i - 3)\n    emitu(s / 4)\n", "trap"},
 		{"Quoin wrong answer", "pid", "quoin", qhdr + "fn main()\n  emit(0)\n", "wrong"},
+		{"C median with a stack buffer", "median", "c", hdr + `int main(void){uint32_t n=input_len(),i=0;while(i<n){uint32_t len=input_byte(i);if(len==0){emit(-1);return 0;}if(i+1+len>n){emit(-2);return 0;}volatile uint8_t buf[255];for(uint32_t k=0;k<len;k++)buf[k]=input_byte(i+1+k);for(uint32_t a=1;a<len;a++)for(uint32_t b=a;b>0&&buf[b-1]>buf[b];b--){uint8_t t=buf[b];buf[b]=buf[b-1];buf[b-1]=t;}emitu(buf[(len-1)/2]);i+=1+len;}return 0;}`, "stack"},
+		{"Quoin median with a grow buffer on the data stack", "median", "quoin", qhdr + "fn main()\n  n := input_len()\n  var i: u32 = 0\n  for i < n\n    plen := u32(input_byte(i))\n    if plen == 0\n      emit(-1)\n      return\n    if i + 1 + plen > n\n      emit(-2)\n      return\n    var buf: grow [255]u8\n    for k in 0..plen\n      buf.push(input_byte(i + 1 + k))\n    var best: u8 = 0\n    for a in 0..buf.len\n      var less: u32 = 0\n      var le: u32 = 0\n      for b in buf\n        if b < buf[a]\n          less += 1\n        if b <= buf[a]\n          le += 1\n      if less <= (plen - 1) / 2 && le > (plen - 1) / 2\n        best = buf[a]\n    emitu(best)\n    i += 1 + plen\n", "stack"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

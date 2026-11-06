@@ -1,0 +1,22 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+const COEF: [8]i16 = [-3000, 6000, 12000, 18000, 18000, 12000, 6000, -3000]
+
+fn sample(i: u32) i32
+  lo := u16(input_byte(2 * i))
+  hi := u16(input_byte(2 * i + 1))
+  return i32(i16.wrap(lo | (hi << 8)))
+
+fn main()
+  count := input_len() / 2
+  if count < 8
+    return
+  for n in 7..count
+    var acc: i32 = 0
+    for k, c in COEF
+      acc = acc +| i32(c) * sample(n - k)
+    acc = acc +| 16384
+    emit(i16.sat(acc >> 15))

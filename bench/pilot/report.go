@@ -99,26 +99,40 @@ func report(runs []Run, ts []*Task, ls []*Lang, cfg config, meta map[string]any)
 	}
 	b.WriteString("\nThe median and p90 are over tasks, of each task's median over seeds.\n\n")
 
+	// Each arm is compared with the C baseline when it is present.
+	var base *Lang
+	var others []*Lang
+	for _, l := range ls {
+		if l.Name == "c" {
+			base = l
+		} else {
+			others = append(others, l)
+		}
+	}
 	b.WriteString("## Per task (median tokens over seeds; successes)\n\n| task |")
 	for _, l := range ls {
 		fmt.Fprintf(&b, " %s |", l.Name)
 	}
-	if len(ls) == 2 {
-		fmt.Fprintf(&b, " %s / %s |", ls[0].Name, ls[1].Name)
+	if base != nil {
+		for _, l := range others {
+			fmt.Fprintf(&b, " %s / c |", l.Name)
+		}
 	}
 	b.WriteString("\n| --- |")
 	for range ls {
 		b.WriteString(" ---: |")
 	}
-	if len(ls) == 2 {
-		b.WriteString(" ---: |")
+	if base != nil {
+		for range others {
+			b.WriteString(" ---: |")
+		}
 	}
 	b.WriteString("\n")
-	var logRatios []float64
-	wins := 0
+	logRatios := map[string][]float64{}
+	wins := map[string]int{}
 	for _, t := range ts {
 		fmt.Fprintf(&b, "| %s |", t.Name)
-		var meds []float64
+		meds := map[string]float64{}
 		for _, l := range ls {
 			xs := perTask[t.Name][l.Name]
 			s := 0
@@ -127,27 +141,32 @@ func report(runs []Run, ts []*Task, ls []*Lang, cfg config, meta map[string]any)
 					s++
 				}
 			}
-			m := median(xs)
-			meds = append(meds, m)
-			fmt.Fprintf(&b, " %.0f (%d/%d) |", m, s, len(xs))
+			meds[l.Name] = median(xs)
+			fmt.Fprintf(&b, " %.0f (%d/%d) |", meds[l.Name], s, len(xs))
 		}
-		if len(ls) == 2 && meds[0] > 0 && meds[1] > 0 {
-			ratio := meds[0] / meds[1]
-			logRatios = append(logRatios, math.Log(ratio))
-			if ratio < 1 {
-				wins++
+		if base != nil {
+			for _, l := range others {
+				ratio := meds[l.Name] / meds["c"]
+				logRatios[l.Name] = append(logRatios[l.Name], math.Log(ratio))
+				if ratio < 1 {
+					wins[l.Name]++
+				}
+				fmt.Fprintf(&b, " %.2f |", ratio)
 			}
-			fmt.Fprintf(&b, " %.2f |", ratio)
 		}
 		b.WriteString("\n")
 	}
-	if len(ls) == 2 && len(logRatios) > 0 {
-		var sum float64
-		for _, x := range logRatios {
-			sum += x
+	if base != nil {
+		b.WriteString("\n")
+		for _, l := range others {
+			var sum float64
+			for _, x := range logRatios[l.Name] {
+				sum += x
+			}
+			n := len(logRatios[l.Name])
+			fmt.Fprintf(&b, "- %s vs c: geometric mean of the per-task ratio **%.2f** (below 1 means fewer tokens than C); cheaper on %d of %d tasks.\n",
+				l.Name, math.Exp(sum/float64(n)), wins[l.Name], n)
 		}
-		fmt.Fprintf(&b, "\nGeometric mean of the per-task ratio %s/%s: **%.2f** (below 1 means %s needed fewer tokens). %s was cheaper on %d of %d tasks.\n",
-			ls[0].Name, ls[1].Name, math.Exp(sum/float64(len(logRatios))), ls[0].Name, ls[0].Name, wins, len(logRatios))
 	}
 
 	b.WriteString("\n## Where attempts failed (all turns, all runs)\n\n| Language | compile | wrong output | trap | timeout | fault | stack | no code | refusal |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")

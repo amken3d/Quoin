@@ -1,0 +1,31 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+var counts: [256]u8
+
+fn main()
+  n := input_len()
+  var i: u32 = 0
+  for i < n
+    plen := u32(input_byte(i))
+    if plen == 0
+      emit(-1)
+      return
+    if i + 1 + plen > n
+      emit(-2)
+      return
+    for v in 0..256
+      counts[v] = 0
+    for k in 0..plen
+      b := input_byte(i + 1 + k)
+      counts[b] += 1
+    target := (plen - 1) / 2
+    var seen: u32 = 0
+    for v in 0..256
+      seen += counts[v]
+      if seen > target
+        emitu(v)
+        break
+    i += 1 + plen
