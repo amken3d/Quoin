@@ -1,0 +1,64 @@
+// Arithmetic semantics: checked by default, explicit wrap and saturate.
+extern fn emit(v: i64) stack 64
+
+const K = 7
+
+fn main()
+  var a: u8 = 200
+  var b: u8 = 100
+  emit(a +% b)          // 44
+  emit(a +| b)          // 255
+  emit(b -| a)          // 0
+  emit(b -% a)          // 156
+  var c: i8 = -100
+  emit(c -| 100)        // -128
+  emit(c -% 100)        // 56
+  emit(c *| 2)          // -128
+  var w: u16 = u16(a) + u16(b)
+  emit(w)               // 300, no runtime check: interval [0,510] fits u16
+  emit(u8.wrap(w))      // 44
+  emit(u8.sat(w))       // 255
+  var x: u12 = 4000
+  emit(x +% 200)        // 104
+  emit(x +| 200)        // 4095
+  var s: i7 = 60
+  emit(s +% 10)         // -58
+  emit(~x)              // 95
+  emit(a >> 3)          // 25
+  emit(a << 1)          // 144 (shifts wrap)
+  emit(-c)              // 100
+  emit(K * 6)           // 42
+  emit(i32(c) / 7)      // -14
+  emit(i32(c) % 7)      // -2
+  var big: u64 = 18446744073709551615
+  emit(i64(big >> 1))   // 9223372036854775807
+  emit(i64.wrap(big))   // -1
+  var n: u32 = 3
+  emit(u32(1) << n)     // 8
+  emit(a + b)           // traps: 300 overflows u8
+
+// want:
+// 44
+// 255
+// 0
+// 156
+// -128
+// 56
+// -128
+// 300
+// 44
+// 255
+// 104
+// 4095
+// -58
+// 95
+// 25
+// 144
+// 100
+// 42
+// -14
+// -2
+// 9223372036854775807
+// -1
+// 8
+// trap

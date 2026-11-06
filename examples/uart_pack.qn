@@ -1,0 +1,60 @@
+// The design doc's UART example, completed for an STM32F4 (USART2, GPIOA).
+
+enum Mode: u2
+  In = 0
+  Out = 1
+  Alt = 2
+  Analog = 3
+
+regs Gpio
+  MODER: u32 @ 0x00
+    P2: Mode @ 4
+    P3: Mode @ 6
+    P5: Mode @ 10
+  ODR: u32 @ 0x14
+    P5: bool @ 5
+
+regs Uart
+  SR: u32 @ 0x00
+    RXNE: bool @ 5
+    TC: bool @ 6
+    TXE: bool @ 7
+  DR: u32 @ 0x04
+  BRR: u32 @ 0x08
+  CR1: u32 @ 0x0C
+    RE: bool @ 2
+    TE: bool @ 3
+    UE: bool @ 13
+
+periph GPIOA: Gpio @ 0x40020000
+periph USART2: Uart @ 0x40004400
+
+error Timeout
+
+// Bounded poll: no unbounded loops in a driver.
+fn wait_txe(u: Uart) !Timeout
+  for i in 0..100000
+    if u.SR.TXE
+      return
+  return Timeout
+
+fn send(u: Uart, buf: []u8) !Timeout
+  for b in buf
+    wait_txe(u)?
+    u.DR = b
+
+fn pack(src: []u8, dst: grow [64]u8) where src.len <= 64
+  for b in src
+    dst.push(b)
+
+fn main()
+  GPIOA.MODER.P5 = .Out
+  USART2.BRR = 0x0683 // 115200 baud at 16 MHz
+  USART2.CR1.TE = true
+  USART2.CR1.UE = true
+  var raw: [4]u8 = ['p', 'i', 'n', 'g']
+  var out: grow [64]u8
+  pack(raw, out)
+  for
+    send(USART2, out) catch
+      GPIOA.ODR.P5 = true

@@ -1,0 +1,60 @@
+// RP2040 (Raspberry Pi Pico): blink the LED on GPIO25 with SIO and the
+// 1 MHz system timer. Register offsets from the RP2040 datasheet.
+
+regs Resets
+  RESET: u32 @ 0x0
+    IO_BANK0: bool @ 5
+    PADS_BANK0: bool @ 8
+  RESET_DONE: u32 @ 0x8
+    IO_BANK0: bool @ 5
+    PADS_BANK0: bool @ 8
+
+enum Func: u5
+  Spi = 1
+  Uart = 2
+  I2c = 3
+  Pwm = 4
+  Sio = 5
+  Pio0 = 6
+  Pio1 = 7
+  Null = 31
+
+regs IoBank0
+  GPIO25_CTRL: u32 @ 0xCC
+    FUNCSEL: Func @ 0
+
+regs Sio
+  GPIO_OUT_SET: u32 @ 0x14
+  GPIO_OUT_CLR: u32 @ 0x18
+  GPIO_OUT_XOR: u32 @ 0x1C
+  GPIO_OE_SET: u32 @ 0x24
+
+regs Timer
+  TIMERAWL: u32 @ 0x28
+
+periph RESETS: Resets @ 0x4000C000
+periph IO_BANK0: IoBank0 @ 0x40014000
+periph SIO: Sio @ 0xD0000000
+periph TIMER: Timer @ 0x40054000
+
+const LED: u32 = 25
+
+fn unreset()
+  RESETS.RESET.IO_BANK0 = false
+  RESETS.RESET.PADS_BANK0 = false
+  for !(RESETS.RESET_DONE.IO_BANK0 && RESETS.RESET_DONE.PADS_BANK0)
+    continue
+
+// Wrapping subtraction keeps the comparison right across timer rollover.
+fn delay_us(us: u32)
+  start := TIMER.TIMERAWL
+  for TIMER.TIMERAWL -% start < us
+    continue
+
+fn main()
+  unreset()
+  IO_BANK0.GPIO25_CTRL.FUNCSEL = .Sio
+  SIO.GPIO_OE_SET = u32(1) << LED
+  for
+    SIO.GPIO_OUT_XOR = u32(1) << LED
+    delay_us(500000)

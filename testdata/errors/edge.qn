@@ -1,0 +1,28 @@
+const A = B //! E114
+const B = A
+struct S //! E124
+  s: S
+enum E: i8
+  X = 200 //! E103
+periph P: Missing @ 0 //! E124
+regs R
+  D: u32 @ 0
+periph RR: R @ 0x40000000
+
+fn mk() [2]u8
+  return [1, 2]
+
+fn helper(n: u8) u8
+  return n
+
+fn main()
+  for x in 5 //! E113
+    continue
+  mk()[0] = 1 //! E110
+  y := 3 catch 0 //! E104
+  z := 4? //! E104
+  r := RR
+  r.D = 5
+  r.Q = 1 //! E112
+  var a: [3]u8 = [1, 2] //! E104
+  helper(1, 2) //! E105

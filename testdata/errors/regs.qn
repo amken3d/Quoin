@@ -1,0 +1,14 @@
+regs R
+  A: u32 @ 0x00
+    X: u4 @ 30 //! E120
+  B: u32 @ 0x02 //! E120
+  C: u16 @ 0x04
+    Y: bool @ 3
+    Z: u2 @ 2 //! E120
+  D: i32 @ 0x08 //! E120
+
+periph P: R @ 0x40000000
+
+fn main()
+  P.C.Y = true
+  P.C.Q = 1 //! E112

@@ -1,0 +1,13 @@
+fn f(x: u8) u8
+  if x > 1 //! E111
+    return 1
+
+fn g()
+  break //! E116
+
+fn main()
+  var a: u8 = 1
+  a + 1 //! E125
+  f = 3 //! E105
+  for i in 0..2
+    i = 1 //! E110

@@ -1,0 +1,20 @@
+// A where clause is a runtime precondition in v0; push checks capacity.
+extern fn emit(v: i64) stack 64
+
+fn pack(src: []u8, dst: grow [4]u8) where src.len <= 4
+  for b in src
+    dst.push(b)
+  emit(dst.len)
+
+fn main()
+  var a: [6]u8 = [1, 2, 3, 4, 5, 6]
+  var g: grow [4]u8
+  pack(a[0..3], g)               // 3
+  g.clear()
+  pack(a[..4], g)                // 4
+  pack(a[..], g)                 // traps: 6 > 4
+
+// want:
+// 3
+// 4
+// trap

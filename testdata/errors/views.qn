@@ -1,0 +1,20 @@
+const T: [2]u8 = [1, 2]
+var gs: []u8 //! E118
+
+struct S
+  v: []u8 //! E118
+
+fn get() []u8 //! E118
+  var a: [2]u8
+  return a[..]
+
+fn mk() [2]u8
+  return [1, 2]
+
+fn main()
+  var a: [4]u8
+  s := a[0..2]
+  s = a[1..3] //! E118
+  t := T[0..1] //! E118
+  u := mk()[0..1] //! E118
+  var w: []u8 //! E118
