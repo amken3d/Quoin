@@ -1,5 +1,4 @@
 # Quoin
-A quoin is the wedge a printer drives into the chase to lock the type so nothing can shift while the press runs. That's the language in one object: memory that never moves, bounds locked at compile time, every cycle set before it runs.
 
 Quoin is a no-heap language for firmware written by AI models. On the RP2350 it compiles straight to Thumb-2 and proves each function's worst-case stack and cycles. For any other part it compiles to plain C99 for the vendor toolchain, with stack bounds. The design is in [docs/design.md](docs/design.md), the language as implemented in [docs/language.md](docs/language.md), what v0 covers in [docs/status.md](docs/status.md), and how it is measured in [docs/benchmark.md](docs/benchmark.md).
 
