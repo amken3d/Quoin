@@ -1,0 +1,51 @@
+// STM32F4: the USART2 receive interrupt hands bytes to main through a
+// single-producer single-consumer queue, and main echoes whole lines.
+// No global is shared between the isr and main; the compiler checks that.
+
+regs Uart
+  SR: u32 @ 0x00
+    RXNE: bool @ 5
+    TXE: bool @ 7
+  DR: u32 @ 0x04
+  BRR: u32 @ 0x08
+  CR1: u32 @ 0x0C
+    RE: bool @ 2
+    TE: bool @ 3
+    RXNEIE: bool @ 5
+    UE: bool @ 13
+
+regs Nvic
+  ISER1: u32 @ 0x04
+
+periph USART2: Uart @ 0x40004400
+periph NVIC: Nvic @ 0xE000E100
+
+var rx: queue [32]u8
+
+isr fn USART2_IRQHandler()
+  if USART2.SR.RXNE
+    b := u8.wrap(USART2.DR)
+    rx.send(b) catch return // full: drop the byte
+
+fn put(b: u8)
+  for !USART2.SR.TXE
+    continue
+  USART2.DR = b
+
+fn main()
+  USART2.BRR = 0x0683 // 115200 baud at 16 MHz
+  USART2.CR1.RXNEIE = true
+  USART2.CR1.RE = true
+  USART2.CR1.TE = true
+  USART2.CR1.UE = true
+  NVIC.ISER1 = u32(1) << 6 // USART2 is IRQ 38
+  var line: grow [64]u8
+  for
+    b := rx.recv() catch continue
+    if b == '\r'
+      for c in line
+        put(c)
+      put('\n')
+      line.clear()
+    else if line.len < line.cap
+      line.push(b)

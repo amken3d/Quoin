@@ -1,0 +1,29 @@
+// kernel: fir
+// 8-tap Q15 FIR over 40 samples with saturating accumulation.
+extern fn emit(v: i32) stack 32 cycles 400
+
+const TAPS: [8]i16 = [-1200, 3400, 9000, 12000, 12000, 9000, 3400, -1200]
+
+fn fir(x: []i16, out: grow [33]i16) where x.len <= 40
+  out.clear()
+  if x.len < 8
+    return
+  for n in 0..x.len - 7
+    var acc: i32 = 0
+    for k, t in TAPS
+      acc = acc +| i32(t) * i32(x[n + k])
+    out.push(i16.sat(acc >> 15))
+
+fn main()
+  var x: [40]i16
+  for i in 0..40
+    x[i] = i16.wrap(u32(i) * 2731) -% 16000
+  var y: grow [33]i16
+  fir(x, y)
+  var sum: i32 = 0
+  for v in y
+    sum += v
+  emit(sum)
+
+// want:
+// 29556

@@ -1,0 +1,24 @@
+// kernel: crc8
+// CRC-8 (poly 0x07) over 64 bytes: a data-dependent branch inside a
+// fixed 8-step bit loop.
+extern fn emitu(v: u32) stack 32 cycles 400
+
+fn crc8(data: []u8) u8 where data.len <= 64
+  var crc: u8 = 0
+  for b in data
+    crc = crc ^ b
+    for i in 0..8
+      if crc & 0x80 != 0
+        crc = (crc << 1) ^ 0x07
+      else
+        crc = crc << 1
+  return crc
+
+fn main()
+  var buf: [64]u8
+  for i in 0..64
+    buf[i] = u8(i) *% 37 +% 11
+  emitu(crc8(buf))
+
+// want:
+// 30

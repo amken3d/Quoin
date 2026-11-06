@@ -1,0 +1,25 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+fn bit(pos: u32) u32
+  b := input_byte(pos / 8)
+  return u32((b >> (7 - pos % 8)) & 1)
+
+fn main()
+  total := input_len() * 8
+  var pos: u32 = 0
+  for total - pos >= 5
+    var w: u32 = 0
+    for k in 0..5
+      w = (w << 1) | bit(pos)
+      pos += 1
+    if total - pos < w + 1
+      emit(-1)
+      return
+    var v: u32 = 0
+    for k in 0..w + 1
+      v = (v << 1) | bit(pos)
+      pos += 1
+    emitu(v)

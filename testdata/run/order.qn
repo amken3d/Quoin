@@ -1,0 +1,47 @@
+// Quoin evaluates operands and arguments left to right, calls included.
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+
+var log: grow [8]u8
+
+fn tag(v: u8) u8
+  log.push(v)
+  return v
+
+fn pair(a: u8, b: u8) u16
+  return u16(a) * 10 + u16(b)
+
+error Bad
+
+fn may(fail: bool) u8 !Bad
+  if fail
+    return Bad
+  return tag(9)
+
+fn first() u8 !Bad
+  x := tag(1) + may(false)?
+  y := may(true)?
+  return x + y
+
+fn main()
+  emit(pair(tag(3), tag(4)))     // 34
+  v := tag(5) < tag(6) && tag(7) == 7
+  emit(first() catch 0)          // 0, but tags 1 and 9 were logged
+  ok := false || tag(8) == 8
+  for t in log
+    emit(t)                      // 3 4 5 6 7 1 9 8
+  if v && ok
+    emit(100)
+
+// want:
+// 34
+// 0
+// 3
+// 4
+// 5
+// 6
+// 7
+// 1
+// 9
+// 8
+// 100

@@ -1,0 +1,16 @@
+var count: u32
+var q: queue [4]u8
+
+fn bump()
+  count += 1 //! E204
+
+isr fn A_IRQHandler()
+  bump()
+  q.send(1) catch return
+
+isr fn B_IRQHandler()
+  q.send(2) catch return //! E205
+
+fn main()
+  x := count
+  b := q.recv() catch 0

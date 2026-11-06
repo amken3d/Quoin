@@ -1,0 +1,7 @@
+// budget: 64
+fn work()
+  var buf: grow [128]u8
+  buf.push(1)
+
+fn main() //! E202
+  work()

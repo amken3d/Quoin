@@ -1,0 +1,72 @@
+// RP2350 (Pico 2): blink the LED on GPIO25 with full claims. Register
+// addresses come from TickTrace's include/*.inc (RP2350 datasheet).
+// Build: quoinc build --target rp2350 examples/rp2350_blink.qn
+// targets: rp2350
+
+regs Resets
+  RESET: u32 @ 0x00
+    IO_BANK0: bool @ 6
+    PADS_BANK0: bool @ 9
+  RESET_DONE: u32 @ 0x08
+    IO_BANK0: bool @ 6
+    PADS_BANK0: bool @ 9
+
+enum Func: u5
+  Sio = 5
+  Null = 31
+
+regs IoBank0
+  GPIO25_CTRL: u32 @ 0xCC
+    FUNCSEL: Func @ 0
+
+regs PadsBank0
+  GPIO25: u32 @ 0x68
+    IE: bool @ 6
+    OD: bool @ 7
+    ISO: bool @ 8
+
+regs Sio
+  GPIO_OUT_SET: u32 @ 0x018
+  GPIO_OUT_CLR: u32 @ 0x020
+  GPIO_OUT_XOR: u32 @ 0x028
+  GPIO_OE_SET: u32 @ 0x038
+
+periph RESETS: Resets @ 0x40020000
+periph IO_BANK0: IoBank0 @ 0x40028000
+periph PADS_BANK0: PadsBank0 @ 0x40038000
+periph SIO: Sio @ 0xD0000000
+
+const LED: u32 = 25
+
+error Stuck
+
+// Bounded wait for both blocks to leave reset: no unbounded spin.
+fn unreset() !Stuck where cycles <= 4000062
+  RESETS.RESET.IO_BANK0 = false
+  RESETS.RESET.PADS_BANK0 = false
+  for i in 0..100000
+    if RESETS.RESET_DONE.IO_BANK0 && RESETS.RESET_DONE.PADS_BANK0
+      return
+  return Stuck
+
+fn led_init() where cycles <= 200
+  PADS_BANK0.GPIO25.ISO = false // pads start isolated on RP2350
+  PADS_BANK0.GPIO25.OD = false
+  IO_BANK0.GPIO25_CTRL.FUNCSEL = .Sio
+  SIO.GPIO_OE_SET = u32(1) << LED
+
+fn toggle() where cycles <= 20, stack <= 16
+  SIO.GPIO_OUT_XOR = u32(1) << LED
+
+// A delay whose length is the proven cycle bound of a fixed loop.
+fn delay() where cycles <= 4200032
+  var n: u32 = 0
+  for i in 0..200000
+    n +%= 1
+
+fn main()
+  unreset() catch return
+  led_init()
+  for
+    toggle()
+    delay()

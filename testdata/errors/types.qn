@@ -1,0 +1,15 @@
+fn main()
+  var a: u8 = 300 //! E103
+  var b: u32 = 5
+  var c: u8 = b //! E117
+  var d: i32 = -1
+  e := b + d //! E104
+  var f: bool = 1 //! E104
+  g := -b //! E113
+  var arr: [4]u8
+  h := arr[4] //! E126
+  k := b << 32 //! E126
+  if b //! E104
+    b = 1
+  m := 1 << b //! E113
+  n := arr[d] //! E104

@@ -1,0 +1,620 @@
+{
+  "meta": {
+    "ceiling": 150000,
+    "date": "2026-11-06T18:00:47Z",
+    "effort": "medium",
+    "max_iters": 6,
+    "model": "claude-opus-5-5",
+    "ref_tokens": {
+      "crc16": {
+        "quoin-brief": 235
+      },
+      "ctrlreg": {
+        "quoin-brief": 426
+      },
+      "debounce": {
+        "quoin-brief": 217
+      },
+      "mix": {
+        "quoin-brief": 204
+      },
+      "movavg": {
+        "quoin-brief": 206
+      },
+      "packets": {
+        "quoin-brief": 305
+      },
+      "pid": {
+        "quoin-brief": 299
+      },
+      "ringbuf": {
+        "quoin-brief": 277
+      },
+      "rle": {
+        "quoin-brief": 207
+      },
+      "varint": {
+        "quoin-brief": 290
+      }
+    },
+    "seeds": 3,
+    "set": "easy",
+    "spec_tokens": {
+      "quoin-brief": 2061
+    },
+    "stopped_by_budget": false,
+    "vectors": 3
+  },
+  "runs": [
+    {
+      "task": "crc16",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 127,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 500
+      },
+      "tokens": 2681,
+      "usd": 0.0109188,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 9.043450422
+    },
+    {
+      "task": "crc16",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 127,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 659
+      },
+      "tokens": 2840,
+      "usd": 0.0140988,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 7.186510997
+    },
+    {
+      "task": "crc16",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 127,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 677
+      },
+      "tokens": 2858,
+      "usd": 0.014458799999999999,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 7.975896961
+    },
+    {
+      "task": "ctrlreg",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 290,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 1156
+      },
+      "tokens": 3500,
+      "usd": 0.0246908,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 10.845972082
+    },
+    {
+      "task": "ctrlreg",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 290,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 1070
+      },
+      "tokens": 3414,
+      "usd": 0.0229708,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 10.239141386
+    },
+    {
+      "task": "ctrlreg",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 290,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 1403
+      },
+      "tokens": 3747,
+      "usd": 0.0296308,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 12.636781953
+    },
+    {
+      "task": "debounce",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 177,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 298
+      },
+      "tokens": 2529,
+      "usd": 0.0070788000000000005,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 2.827255803
+    },
+    {
+      "task": "debounce",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 177,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 298
+      },
+      "tokens": 2529,
+      "usd": 0.0070788000000000005,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 2.949257427
+    },
+    {
+      "task": "debounce",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 177,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 427
+      },
+      "tokens": 2658,
+      "usd": 0.009658799999999999,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 3.919527744
+    },
+    {
+      "task": "mix",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 158,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 742
+      },
+      "tokens": 2954,
+      "usd": 0.0158828,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 7.783491602
+    },
+    {
+      "task": "mix",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 158,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 705
+      },
+      "tokens": 2917,
+      "usd": 0.0151428,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 7.462845858
+    },
+    {
+      "task": "mix",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 158,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 655
+      },
+      "tokens": 2867,
+      "usd": 0.014142799999999999,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 6.893162849
+    },
+    {
+      "task": "movavg",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 109,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 267
+      },
+      "tokens": 2430,
+      "usd": 0.0061868,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 3.313364127
+    },
+    {
+      "task": "movavg",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 109,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 277
+      },
+      "tokens": 2440,
+      "usd": 0.0063868,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 6.00866257
+    },
+    {
+      "task": "movavg",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 109,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 267
+      },
+      "tokens": 2430,
+      "usd": 0.0061868,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 3.2536829
+    },
+    {
+      "task": "packets",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 198,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 717
+      },
+      "tokens": 2969,
+      "usd": 0.015542799999999999,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 7.171374168
+    },
+    {
+      "task": "packets",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 198,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 884
+      },
+      "tokens": 3136,
+      "usd": 0.018882799999999998,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 8.467112083
+    },
+    {
+      "task": "packets",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 198,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 635
+      },
+      "tokens": 2887,
+      "usd": 0.0139028,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 5.930430137
+    },
+    {
+      "task": "pid",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 202,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 595
+      },
+      "tokens": 2851,
+      "usd": 0.0131188,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 5.234883907
+    },
+    {
+      "task": "pid",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 202,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 628
+      },
+      "tokens": 2884,
+      "usd": 0.013778799999999999,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 5.694208088
+    },
+    {
+      "task": "pid",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 202,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 652
+      },
+      "tokens": 2908,
+      "usd": 0.014258799999999999,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 5.900380086
+    },
+    {
+      "task": "ringbuf",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 172,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 578
+      },
+      "tokens": 2804,
+      "usd": 0.0126588,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 5.08470172
+    },
+    {
+      "task": "ringbuf",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 172,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 363
+      },
+      "tokens": 2589,
+      "usd": 0.0083588,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 3.39495053
+    },
+    {
+      "task": "ringbuf",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 172,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 568
+      },
+      "tokens": 2794,
+      "usd": 0.012458799999999999,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 5.080562609
+    },
+    {
+      "task": "rle",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 98,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 764
+      },
+      "tokens": 2916,
+      "usd": 0.016082799999999998,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 6.834447581
+    },
+    {
+      "task": "rle",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 98,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 750
+      },
+      "tokens": 2902,
+      "usd": 0.0158028,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 6.691575474
+    },
+    {
+      "task": "rle",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 98,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 784
+      },
+      "tokens": 2936,
+      "usd": 0.0164828,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 7.152634004
+    },
+    {
+      "task": "varint",
+      "lang": "quoin-brief",
+      "seed": 0,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 173,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 1060
+      },
+      "tokens": 3287,
+      "usd": 0.022302799999999998,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 10.69342699
+    },
+    {
+      "task": "varint",
+      "lang": "quoin-brief",
+      "seed": 1,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 173,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 1040
+      },
+      "tokens": 3267,
+      "usd": 0.0219028,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 10.753656374
+    },
+    {
+      "task": "varint",
+      "lang": "quoin-brief",
+      "seed": 2,
+      "success": true,
+      "iters": 1,
+      "usage": {
+        "In": 173,
+        "CacheWrite": 0,
+        "CacheRead": 2054,
+        "Out": 1273
+      },
+      "tokens": 3500,
+      "usd": 0.0265628,
+      "first_compile_ok": true,
+      "first_pass": true,
+      "turns": null,
+      "seconds": 12.929415996
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+fn main()
+  var a: u8 = 1
+  a: u8 := 2 //! E003
+
+fn other()
+  b := (1 + //! E003

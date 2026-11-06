@@ -1,0 +1,8 @@
+fn a(n: u8)
+  b(n)
+
+fn b(n: u8)
+  a(n) //! E201
+
+fn main()
+  a(3)

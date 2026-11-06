@@ -1,0 +1,4 @@
+extern fn delay(us: u32) //! E203
+
+fn main()
+  delay(10)

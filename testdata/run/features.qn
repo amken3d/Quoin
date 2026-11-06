@@ -1,0 +1,104 @@
+// Error unions, catch forms, grow arrays, slices, structs, enums, queues.
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+
+error TooBig, Odd
+
+struct Point
+  x: i32
+  y: i32
+
+enum Color: u8
+  Red
+  Green = 5
+  Blue
+
+const TABLE: [4]u16 = [1, 10, 100, 1000]
+var ticks: u32
+var q: queue [2]u8
+
+fn half(v: u32) u32 !Odd
+  if v % 2 == 1
+    return Odd
+  return v / 2
+
+fn quarter(v: u32) u32 !Odd|TooBig
+  if v > 1000
+    return TooBig
+  h := half(v)?
+  return half(h)?
+
+fn sum(xs: []u16) u32
+  var t: u32 = 0
+  for x in xs
+    t += x
+  return t
+
+fn fill(dst: grow [8]u8, n: u8)
+  for i in 0..n
+    dst.push(u8(i) * 2)
+
+fn nested() u32
+  var tmp: grow [8]u8
+  fill(tmp, 5)
+  var acc: u32 = 0
+  for i, v in tmp
+    acc += u32(v) * u32(i)
+  return acc + tmp.len
+
+fn norm(p: Point) i32
+  return p.x * p.x + p.y * p.y
+
+fn main()
+  emitu(quarter(40) catch 999)            // 10
+  emitu(quarter(42) catch 999)            // 999 (21 is odd)
+  quarter(5000) catch e
+    if e == TooBig
+      emit(-1)                           // -1
+  v := quarter(8) catch 0
+  emitu(v)                               // 2
+  var tab: [4]u16 = TABLE
+  emitu(sum(tab[1..3]))                   // 110
+  var arr: [4]u16 = TABLE
+  arr[0] = 7
+  emitu(sum(arr))                         // 1117
+  emitu(nested())                         // 0*0+2*1+4*2+6*3+8*4 + 5 = 65
+  p := Point{x: 3, y: -4}
+  emit(norm(p))                          // 25
+  c := Color.Blue
+  emit(u8(c))                            // 6
+  if c != .Red
+    emit(1)                              // 1
+  for i in 0..3
+    q.send(u8(i)) catch
+      emit(-2)                           // -2 once (queue holds 2)
+  for
+    b := q.recv() catch break
+    emit(b)                              // 0, 1
+  var k: u32 = 0
+  for k < 3
+    k += 1
+  emitu(k)                               // 3
+  ticks += 1
+  emitu(ticks)                            // 1
+  emit(TABLE[k])                         // 1000
+  emit(arr[k + 1])                       // traps: index 4 out of range
+
+// want:
+// 10
+// 999
+// -1
+// 2
+// 110
+// 1117
+// 65
+// 25
+// 6
+// 1
+// -2
+// 0
+// 1
+// 3
+// 1
+// 1000
+// trap

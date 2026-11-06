@@ -1,0 +1,16 @@
+struct P
+  x: i32
+
+fn f(a: u8) u8
+  return a
+
+fn main()
+  y := countr //! E101
+  v := 1
+  v := 2 //! E106
+  f() //! E105
+  p := P{x: 1}
+  p.z = 3 //! E112
+  for i in 0..3
+    i := 5 //! E106
+  u8 := 3 //! E106

@@ -1,0 +1,19 @@
+// kernel: energy
+// Saturating sum of squares of 64 Q15 samples.
+extern fn emitu(v: u32) stack 32 cycles 400
+
+fn energy(x: []i16) u32 where x.len <= 64
+  var e: u32 = 0
+  for v in x
+    s := i32(v) * i32(v)
+    e = e +| u32(s)
+  return e
+
+fn main()
+  var x: [64]i16
+  for i in 0..64
+    x[i] = i16(i) * 100 - 3200
+  emitu(energy(x))
+
+// want:
+// 218560000

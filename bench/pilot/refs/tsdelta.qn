@@ -1,0 +1,22 @@
+extern fn emit(v: i32) stack 32 cycles 400
+extern fn emitu(v: u32) stack 32 cycles 400
+extern fn input_len() u32 stack 0 cycles 8
+extern fn input_byte(i: u32) u8 stack 0 cycles 16
+
+fn ts(i: u32) u32
+  b := 4 * i
+  return u32(input_byte(b)) | (u32(input_byte(b + 1)) << 8) | (u32(input_byte(b + 2)) << 16) | (u32(input_byte(b + 3)) << 24)
+
+fn main()
+  count := input_len() / 4
+  var over: u32 = 0
+  var big: u32 = 0
+  for k in 1..count
+    e := ts(k) -% ts(k - 1)
+    emitu(e)
+    if e > 1000000
+      over += 1
+    if e > big
+      big = e
+  emitu(over)
+  emitu(big)

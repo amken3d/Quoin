@@ -1,0 +1,28 @@
+error Timeout, Overrun
+
+fn read() u8 !Timeout
+  return 1
+
+fn rw() !Timeout|Overrun
+  return Overrun
+
+fn plain() u8
+  return 2
+
+fn a() !Timeout
+  x := read() //! E107
+  rw()? //! E108
+  plain()? //! E104
+  y := plain() catch 0 //! E104
+
+fn b() u8
+  return read()? //! E109
+
+fn c() bool !Timeout
+  ok := true && read()? == 1 //! E119
+  return ok
+
+fn main()
+  read() //! E107
+  rw() catch return
+  return Timeout //! E109

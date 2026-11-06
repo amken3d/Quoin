@@ -1,0 +1,48 @@
+// Register blocks and bitfields, with the "peripheral" placed in QEMU RAM.
+// targets: m33-qemu
+extern fn emitu(v: u32) stack 32 cycles 400
+
+enum Mode: u2
+  In
+  Out
+  Alt
+  Analog
+
+regs Dev
+  CTRL: u32 @ 0x00
+    EN: bool @ 0
+    MODE: Mode @ 4
+    DIV: u12 @ 16
+  DATA: u16 @ 0x04
+  FLAGS: u8 @ 0x06
+
+periph DEV: Dev @ 0x10300000
+
+fn setup(d: Dev)
+  d.CTRL = 0xF0000000
+  d.CTRL.EN = true
+  d.CTRL.MODE = .Alt
+  d.CTRL.DIV = 0xABC
+  d.DATA = 0xFFFF
+  d.FLAGS = 0x5A
+
+fn main()
+  setup(DEV)
+  emitu(DEV.CTRL)            // 0xFABC0021 = 4206624801
+  emitu(u32(DEV.CTRL.MODE))  // 2
+  emitu(DEV.CTRL.DIV)        // 2748
+  DEV.CTRL.DIV += 1
+  emitu(DEV.CTRL.DIV)        // 2749
+  emitu(DEV.DATA)            // 65535
+  emitu(DEV.FLAGS)           // 90
+  if DEV.CTRL.EN && DEV.CTRL.MODE == .Alt
+    emitu(1)                 // 1
+
+// want:
+// 4206624801
+// 2
+// 2748
+// 2749
+// 65535
+// 90
+// 1
